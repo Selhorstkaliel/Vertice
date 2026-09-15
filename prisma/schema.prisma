@@ -1,0 +1,1399 @@
+// VÉRTICE — data model
+//
+// Conventions
+// - Every student-owned row carries `userId`; authorization is enforced in the
+//   service layer by always scoping queries with it.
+// - Subjects and topics form a canonical catalog shared across competitions
+//   (ownerId = null) so study on equivalent content counts for every edital.
+//   Users may add private subjects/topics (ownerId = user).
+// - Nothing official is ever invented: weights, dates and incidence are
+//   nullable and carry a VerificationStatus.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────── enums ──
+
+enum StudyTrack {
+  PUBLIC
+  MILITARY
+  BOTH
+}
+
+enum CompetitionKind {
+  PUBLIC
+  MILITARY
+}
+
+enum VerificationStatus {
+  VERIFIED
+  UNVERIFIED
+  USER_PROVIDED
+}
+
+enum CompetitionStatus {
+  EXPECTED
+  EDITAL_PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  EXAM_DONE
+  CONCLUDED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum StageStatus {
+  PENDING
+  IN_PROGRESS
+  PASSED
+  FAILED
+  NOT_APPLICABLE
+}
+
+enum TopicStatus {
+  NOT_STUDIED
+  IN_PROGRESS
+  STUDIED
+  REVIEWED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+enum ContentSource {
+  OFFICIAL
+  LICENSED
+  PLATFORM
+  USER
+  GENERATED
+  DEMO
+}
+
+enum AttemptContext {
+  PRACTICE
+  SIMULATION
+  REVIEW
+}
+
+enum ErrorReason {
+  DID_NOT_KNOW
+  CONFUSED_CONCEPTS
+  INTERPRETATION
+  INATTENTION
+  CALCULATION
+  FORGOT_FORMULA
+  GUESS
+  OTHER
+}
+
+enum FlashcardType {
+  CONCEPT
+  FORMULA
+  TRAP
+  PERSONAL_ERROR
+  RULE
+  DEFINITION
+  FROM_QUESTION
+}
+
+enum FlashcardOrigin {
+  MANUAL
+  QUESTION
+  ERROR_NOTEBOOK
+  IMPORT
+  DEMO
+}
+
+enum CardState {
+  NEW
+  LEARNING
+  REVIEW
+  RELEARNING
+}
+
+enum ReviewRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+enum RoutineCategory {
+  SLEEP
+  WORK
+  COLLEGE
+  SCHOOL
+  COURSE
+  COMMUTE
+  TRAINING
+  STUDY
+  MEAL
+  FAMILY
+  LEISURE
+  APPOINTMENT
+  FREE
+  OTHER
+}
+
+enum EnergyLevel {
+  VERY_HIGH
+  HIGH
+  NORMAL
+  LOW
+  VERY_LOW
+}
+
+enum DayPeriod {
+  DAWN
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+enum SlotClass {
+  A
+  B
+  C
+}
+
+enum PlanStatus {
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum PlanItemKind {
+  NEW_CONTENT
+  QUESTIONS
+  REVIEW
+  FLASHCARDS
+  ERROR_NOTEBOOK
+  SIMULATION
+  WRITING
+}
+
+enum PlanItemStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  POSTPONED
+  SKIPPED
+  CANCELED
+  MISSED
+}
+
+enum SessionStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+  ABANDONED
+}
+
+enum SimulationStatus {
+  IN_PROGRESS
+  FINISHED
+  EXPIRED
+}
+
+enum GoalKind {
+  HOURS
+  QUESTIONS
+  TOPICS
+  FLASHCARDS
+  SIMULATIONS
+  REVIEWS
+}
+
+enum GoalPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum NotificationType {
+  FLASHCARDS_DUE
+  SIMULATION_SOON
+  EXAM_COUNTDOWN
+  TOPIC_STALE
+  PLAN_RECALCULATED
+  GOAL
+  RECOMMENDATION
+  SYSTEM
+}
+
+enum CalendarEventType {
+  SESSION
+  REVIEW
+  SIMULATION
+  EXAM
+  REGISTRATION
+  EDITAL
+  TAF
+  GOAL
+  CUSTOM
+}
+
+enum PhysicalModality {
+  RUN
+  PULL_UP
+  PUSH_UP
+  SIT_UP
+  SWIM
+  OTHER
+}
+
+enum MeasureUnit {
+  SECONDS
+  REPS
+  METERS
+  KILOGRAMS
+}
+
+enum BetterWhen {
+  LOWER
+  HIGHER
+}
+
+enum RecommendationKind {
+  PLAN_ADJUSTMENT
+  GOAL_ADJUSTMENT
+  ROUTINE_ADJUSTMENT
+  REPLAN
+  PRIORITY
+}
+
+enum RecommendationStatus {
+  PENDING
+  ACCEPTED
+  EDITED
+  IGNORED
+  UNDONE
+  AUTO_APPLIED
+}
+
+enum RecommendationSource {
+  ENGINE
+  MENTOR
+}
+
+enum MentorRole {
+  USER
+  ASSISTANT
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  REGISTER
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  PASSWORD_CHANGED
+  DATA_EXPORTED
+}
+
+// ──────────────────────────────────────────────────────── identity ──
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  isDemo       Boolean   @default(false)
+  // Can import past exams and publish questions to the shared bank.
+  isAdmin      Boolean   @default(false)
+  onboardedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  profile              Profile?
+  sessions             Session[]
+  passwordResetTokens  PasswordResetToken[]
+  securityEvents       SecurityEvent[]
+  enrollments          StudentCompetition[]
+  ownedCompetitions    Competition[]            @relation("CompetitionOwner")
+  ownedSubjects        Subject[]                @relation("SubjectOwner")
+  ownedTopics          Topic[]                  @relation("TopicOwner")
+  ownedQuestions       Question[]               @relation("QuestionOwner")
+  topicProgress        TopicProgress[]
+  questionAttempts     QuestionAttempt[]
+  questionStates       UserQuestionState[]
+  errorEntries         ErrorEntry[]
+  flashcards           Flashcard[]
+  flashcardReviews     FlashcardReview[]
+  routines             Routine[]
+  energyPeriods        EnergyPeriod[]
+  studyPlans           StudyPlan[]
+  studyPlanItems       StudyPlanItem[]
+  studySessions        StudySession[]
+  simulations          Simulation[]
+  simulationAttempts   SimulationAttempt[]
+  goals                Goal[]
+  goalCompletions      GoalCompletion[]
+  importedPapers       ExamPaper[]
+  notifications        Notification[]
+  notificationPrefs    NotificationPreference[]
+  calendarEvents       CalendarEvent[]
+  performanceSnapshots PerformanceSnapshot[]
+  weeklyReports        WeeklyReport[]
+  militaryTests        MilitaryTest[]
+  militaryTestResults  MilitaryTestResult[]
+  recommendations      AiRecommendation[]
+  mentorMessages       MentorMessage[]
+  achievements         UserAchievement[]
+}
+
+model Profile {
+  id                    String     @id @default(cuid())
+  userId                String     @unique
+  goal                  String?
+  track                 StudyTrack @default(PUBLIC)
+  weeklyHoursTarget     Float?
+  works                 Boolean    @default(false)
+  studiesCollege        Boolean    @default(false)
+  physicalPrep          Boolean    @default(false)
+  timezone              String     @default("America/Sao_Paulo")
+  dailyStudyLimitMin    Int        @default(360)
+  maxSessionMin         Int        @default(90)
+  minBreakMin           Int        @default(10)
+  autoApplyMinorChanges Boolean    @default(false)
+  // Lets the planner adjust period energy from real performance (§27).
+  energyLearning        Boolean    @default(true)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hardSubjects Subject[] @relation("ProfileHardSubjects")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  userAgent  String?
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model SecurityEvent {
+  id        String            @id @default(cuid())
+  userId    String?
+  type      SecurityEventType
+  // Never store raw credentials, tokens or plain emails of unknown accounts.
+  detail    String?
+  createdAt DateTime          @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+// ──────────────────────────────────────────────────── competitions ──
+
+model ExamBoard {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  fullName  String?
+  createdAt DateTime @default(now())
+
+  competitions Competition[]
+  questions    Question[]
+  flashcards   Flashcard[]
+  errorEntries ErrorEntry[]
+  simulations  Simulation[]
+  examPapers   ExamPaper[]
+}
+
+model Competition {
+  id           String             @id @default(cuid())
+  slug         String             @unique
+  name         String
+  organization String
+  position     String?
+  kind         CompetitionKind
+  examBoardId  String?
+  year         Int?
+  examDate     DateTime?          @db.Date
+  editalUrl    String?
+  status       CompetitionStatus  @default(EXPECTED)
+  verification VerificationStatus @default(UNVERIFIED)
+  sourceNote   String?
+  ownerId      String?
+  // Set when a user customizes a catalog edital into a private copy.
+  forkedFromId String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  forkedFrom   Competition?         @relation("CompetitionFork", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks        Competition[]        @relation("CompetitionFork")
+  examBoard    ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  owner        User?                @relation("CompetitionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  stages       CompetitionStage[]
+  subjects     CompetitionSubject[]
+  topics       CompetitionTopic[]
+  enrollments  StudentCompetition[]
+  questions    Question[]
+  flashcards   Flashcard[]
+  errorEntries ErrorEntry[]
+  simulations  Simulation[]
+  planItems    StudyPlanItem[]
+  events       CalendarEvent[]
+  examPapers   ExamPaper[]
+  drafts       QuestionDraft[]
+
+  @@index([kind])
+  @@index([ownerId])
+}
+
+model CompetitionStage {
+  id            String  @id @default(cuid())
+  competitionId String
+  name          String
+  order         Int
+  description   String?
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId, order])
+}
+
+model StudentCompetition {
+  id             String           @id @default(cuid())
+  userId         String
+  competitionId  String
+  isPrimary      Boolean          @default(false)
+  status         EnrollmentStatus @default(ACTIVE)
+  // Used only when the competition has no confirmed exam date.
+  customExamDate DateTime?        @db.Date
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competition   Competition    @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  stages        StudentStage[]
+  militaryTests MilitaryTest[]
+
+  @@unique([userId, competitionId])
+  @@index([userId, isPrimary])
+}
+
+model StudentStage {
+  id                   String      @id @default(cuid())
+  studentCompetitionId String
+  name                 String
+  order                Int
+  status               StageStatus @default(PENDING)
+  date                 DateTime?   @db.Date
+  notes                String?
+
+  enrollment StudentCompetition @relation(fields: [studentCompetitionId], references: [id], onDelete: Cascade)
+
+  @@index([studentCompetitionId, order])
+}
+
+// ─────────────────────────────────────────────────────── syllabus ──
+
+model Subject {
+  id        String   @id @default(cuid())
+  slug      String
+  name      String
+  area      String?
+  ownerId   String?
+  createdAt DateTime @default(now())
+
+  owner            User?                @relation("SubjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  topics           Topic[]
+  competitions     CompetitionSubject[]
+  hardForProfiles  Profile[]            @relation("ProfileHardSubjects")
+  questions        Question[]
+  flashcards       Flashcard[]
+  errorEntries     ErrorEntry[]
+  planItems        StudyPlanItem[]
+  sessions         StudySession[]
+  simulationScopes SimulationSubject[]
+
+  @@unique([ownerId, slug])
+  @@index([ownerId])
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  subjectId String
+  parentId  String?
+  slug      String
+  name      String
+  order     Int      @default(0)
+  ownerId   String?
+  createdAt DateTime @default(now())
+
+  subject      Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  parent       Topic?             @relation("TopicTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Topic[]            @relation("TopicTree")
+  owner        User?              @relation("TopicOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  competitions CompetitionTopic[]
+  progress     TopicProgress[]
+  questions    Question[]
+  flashcards   Flashcard[]
+  errorEntries ErrorEntry[]
+  planItems    StudyPlanItem[]
+  sessions     StudySession[]
+
+  @@unique([subjectId, parentId, slug])
+  @@index([subjectId, parentId, order])
+}
+
+model CompetitionSubject {
+  id            String             @id @default(cuid())
+  competitionId String
+  subjectId     String
+  // Relative weight in the exam. Null = not confirmed.
+  weight        Float?
+  questionCount Int?
+  order         Int                @default(0)
+  verification  VerificationStatus @default(UNVERIFIED)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  subject     Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, subjectId])
+}
+
+model CompetitionTopic {
+  id            String             @id @default(cuid())
+  competitionId String
+  topicId       String
+  // Historical incidence 0..1. Null = unknown; never fabricated.
+  incidence     Float?
+  verification  VerificationStatus @default(UNVERIFIED)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  topic       Topic       @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, topicId])
+  @@index([topicId])
+}
+
+model TopicProgress {
+  id                String      @id @default(cuid())
+  userId            String
+  topicId           String
+  status            TopicStatus @default(NOT_STUDIED)
+  statusSetManually Boolean     @default(false)
+  studiedMinutes    Int         @default(0)
+  questionsAnswered Int         @default(0)
+  questionsCorrect  Int         @default(0)
+  reviewCount       Int         @default(0)
+  lastStudiedAt     DateTime?
+  lastReviewedAt    DateTime?
+  nextReviewAt      DateTime?
+  updatedAt         DateTime    @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([userId, nextReviewAt])
+}
+
+// ─────────────────────────────────────────────────────── questions ──
+
+model Question {
+  id              String        @id @default(cuid())
+  type            QuestionType  @default(MULTIPLE_CHOICE)
+  statement       String
+  explanation     String?
+  difficulty      Difficulty    @default(MEDIUM)
+  subjectId       String
+  topicId         String?
+  examBoardId     String?
+  competitionId   String?
+  year            Int?
+  source          ContentSource
+  sourceReference String?
+  ownerId         String?
+  // Official questions: the paper and number they come from. Generated ones: the model that wrote them.
+  examPaperId     String?
+  questionNumber  Int?
+  /// [{ file, description }] shown where the statement has [[FIGURA n]].
+  figures         Json?
+  aiModel         String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  subject             Subject              @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  topic               Topic?               @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  examBoard           ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  competition         Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  owner               User?                @relation("QuestionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  examPaper           ExamPaper?           @relation(fields: [examPaperId], references: [id], onDelete: SetNull)
+  draft               QuestionDraft?
+  options             QuestionOption[]
+  attempts            QuestionAttempt[]
+  states              UserQuestionState[]
+  errorEntries        ErrorEntry[]
+  flashcards          Flashcard[]
+  simulationQuestions SimulationQuestion[]
+
+  @@index([subjectId, topicId])
+  @@index([examBoardId, year])
+  @@index([competitionId])
+  @@index([ownerId])
+  @@index([examPaperId, questionNumber])
+}
+
+model QuestionOption {
+  id         String  @id @default(cuid())
+  questionId String
+  label      String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int
+
+  question          Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attempts          QuestionAttempt[]
+  simulationAnswers SimulationAnswer[]
+
+  @@index([questionId, order])
+}
+
+model QuestionAttempt {
+  id                  String         @id @default(cuid())
+  userId              String
+  questionId          String
+  selectedOptionId    String?
+  isCorrect           Boolean
+  timeSpentSec        Int?
+  context             AttemptContext @default(PRACTICE)
+  simulationAttemptId String?
+  createdAt           DateTime       @default(now())
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question          Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption    QuestionOption?    @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+  simulationAttempt SimulationAttempt? @relation(fields: [simulationAttemptId], references: [id], onDelete: SetNull)
+  errorEntry        ErrorEntry?
+
+  @@index([userId, createdAt])
+  @@index([userId, questionId])
+}
+
+model UserQuestionState {
+  id            String    @id @default(cuid())
+  userId        String
+  questionId    String
+  favorite      Boolean   @default(false)
+  reviewLater   Boolean   @default(false)
+  attempts      Int       @default(0)
+  lastCorrect   Boolean?
+  lastAttemptAt DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId, lastCorrect])
+}
+
+model ErrorEntry {
+  id            String       @id @default(cuid())
+  userId        String
+  questionId    String?
+  attemptId     String?      @unique
+  subjectId     String
+  topicId       String?
+  competitionId String?
+  examBoardId   String?
+  // Labels are snapshotted so history survives later edits to the question.
+  selectedLabel String?
+  correctLabel  String?
+  reason        ErrorReason?
+  reasonNote    String?
+  note          String?
+  resolvedAt    DateTime?
+  createdAt     DateTime     @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question    Question?        @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  attempt     QuestionAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  subject     Subject          @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  topic       Topic?           @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  competition Competition?     @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  examBoard   ExamBoard?       @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  flashcards  Flashcard[]
+
+  @@index([userId, createdAt])
+  @@index([userId, reason])
+  @@index([userId, topicId])
+}
+
+// ────────────────────────────────────────────────────── flashcards ──
+
+model Flashcard {
+  id               String          @id @default(cuid())
+  userId           String
+  front            String
+  back             String
+  type             FlashcardType   @default(CONCEPT)
+  origin           FlashcardOrigin @default(MANUAL)
+  subjectId        String?
+  topicId          String?
+  competitionId    String?
+  examBoardId      String?
+  difficulty       Difficulty?
+  tags             String[]
+  // Board-pattern cards must cite evidence; never presented as absolute fact.
+  isBoardPattern   Boolean         @default(false)
+  patternEvidence  String?
+  sourceQuestionId String?
+  errorEntryId     String?
+  suspended        Boolean         @default(false)
+
+  // Spaced-repetition state (see src/engines/review)
+  state          CardState @default(NEW)
+  dueAt          DateTime  @default(now())
+  intervalDays   Float     @default(0)
+  ease           Float     @default(2.5)
+  reps           Int       @default(0)
+  lapses         Int       @default(0)
+  learningStep   Int       @default(0)
+  lastReviewedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject        Subject?          @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic          Topic?            @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  competition    Competition?      @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  examBoard      ExamBoard?        @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  sourceQuestion Question?         @relation(fields: [sourceQuestionId], references: [id], onDelete: SetNull)
+  errorEntry     ErrorEntry?       @relation(fields: [errorEntryId], references: [id], onDelete: SetNull)
+  reviews        FlashcardReview[]
+
+  @@index([userId, dueAt])
+  @@index([userId, subjectId])
+  @@index([userId, examBoardId])
+}
+
+model FlashcardReview {
+  id             String       @id @default(cuid())
+  flashcardId    String
+  userId         String
+  rating         ReviewRating
+  stateBefore    CardState
+  intervalBefore Float
+  intervalAfter  Float
+  easeBefore     Float
+  easeAfter      Float
+  durationMs     Int?
+  reviewedAt     DateTime     @default(now())
+
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([flashcardId, reviewedAt])
+  @@index([userId, reviewedAt])
+}
+
+// ───────────────────────────────────────────────────────── routine ──
+
+model Routine {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blocks RoutineBlock[]
+
+  @@index([userId, isActive])
+}
+
+model RoutineBlock {
+  id          String          @id @default(cuid())
+  routineId   String
+  // ISO weekday: 1 = Monday … 7 = Sunday
+  dayOfWeek   Int
+  // Minutes from local midnight; 0 ≤ startMinute < endMinute ≤ 1440.
+  startMinute Int
+  endMinute   Int
+  category    RoutineCategory
+  label       String?
+  isFixed     Boolean         @default(true)
+  energy      EnergyLevel?
+  notes       String?
+
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([routineId, dayOfWeek, startMinute])
+}
+
+model EnergyPeriod {
+  id              String      @id @default(cuid())
+  userId          String
+  period          DayPeriod
+  level           EnergyLevel
+  // Adjustment learned from real performance, −1..1, applied on top of level.
+  learnedDelta    Float       @default(0)
+  // Numbers behind learnedDelta, shown to the student.
+  learnedEvidence Json?
+  learnedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+}
+
+// ─────────────────────────────────────────────────────────── plan ──
+
+model StudyPlan {
+  id                 String     @id @default(cuid())
+  userId             String
+  weekStart          DateTime   @db.Date
+  version            Int        @default(1)
+  status             PlanStatus @default(ACTIVE)
+  engineVersion      String
+  plannedMinutes     Int
+  recommendedMinutes Int
+  // Snapshot of the analyzer output that produced this plan.
+  diagnostics        Json
+  createdAt          DateTime   @default(now())
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items StudyPlanItem[]
+
+  @@unique([userId, weekStart])
+  @@index([userId, status, weekStart])
+}
+
+model StudyPlanItem {
+  id                String         @id @default(cuid())
+  planId            String
+  userId            String
+  date              DateTime       @db.Date
+  startMinute       Int
+  endMinute         Int
+  kind              PlanItemKind
+  status            PlanItemStatus @default(PLANNED)
+  slotClass         SlotClass
+  subjectId         String?
+  topicId           String?
+  competitionId     String?
+  priorityScore     Float
+  reason            String
+  reasonData        Json
+  notes             String?
+  rescheduledFromId String?        @unique
+  completedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  plan            StudyPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject         Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic           Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  competition     Competition?   @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  rescheduledFrom StudyPlanItem? @relation("Reschedule", fields: [rescheduledFromId], references: [id], onDelete: SetNull)
+  rescheduledTo   StudyPlanItem? @relation("Reschedule")
+  sessions        StudySession[]
+
+  @@index([userId, date])
+  @@index([planId, date, startMinute])
+}
+
+model StudySession {
+  id               String        @id @default(cuid())
+  userId           String
+  planItemId       String?
+  subjectId        String?
+  topicId          String?
+  kind             PlanItemKind  @default(NEW_CONTENT)
+  status           SessionStatus @default(RUNNING)
+  isManual         Boolean       @default(false)
+  plannedMinutes   Int?
+  startedAt        DateTime
+  endedAt          DateTime?
+  pausedAt         DateTime?
+  pausedSeconds    Int           @default(0)
+  effectiveSeconds Int           @default(0)
+  // Perceived focus 1..5
+  focus            Int?
+  questionsCount   Int?
+  questionsCorrect Int?
+  notes            String?
+  createdAt        DateTime      @default(now())
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planItem StudyPlanItem? @relation(fields: [planItemId], references: [id], onDelete: SetNull)
+  subject  Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic    Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startedAt])
+  @@index([userId, status])
+}
+
+// ───────────────────────────────────────────────────── simulations ──
+
+model Simulation {
+  id               String      @id @default(cuid())
+  userId           String
+  title            String
+  competitionId    String?
+  examBoardId      String?
+  difficulty       Difficulty?
+  questionCount    Int
+  timeLimitMinutes Int?
+  createdAt        DateTime    @default(now())
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competition Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  examBoard   ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  subjects    SimulationSubject[]
+  questions   SimulationQuestion[]
+  attempts    SimulationAttempt[]
+  events      CalendarEvent[]
+
+  @@index([userId, createdAt])
+}
+
+model SimulationSubject {
+  simulationId String
+  subjectId    String
+
+  simulation Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  subject    Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([simulationId, subjectId])
+}
+
+model SimulationQuestion {
+  id           String @id @default(cuid())
+  simulationId String
+  questionId   String
+  order        Int
+
+  simulation Simulation         @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  question   Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    SimulationAnswer[]
+
+  @@unique([simulationId, questionId])
+  @@index([simulationId, order])
+}
+
+model SimulationAttempt {
+  id           String           @id @default(cuid())
+  simulationId String
+  userId       String
+  status       SimulationStatus @default(IN_PROGRESS)
+  startedAt    DateTime         @default(now())
+  deadlineAt   DateTime?
+  finishedAt   DateTime?
+  correct      Int              @default(0)
+  wrong        Int              @default(0)
+  unanswered   Int              @default(0)
+  score        Float?
+  durationSec  Int?
+
+  simulation Simulation         @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers    SimulationAnswer[]
+  attempts   QuestionAttempt[]
+
+  @@index([userId, startedAt])
+}
+
+model SimulationAnswer {
+  id                   String    @id @default(cuid())
+  attemptId            String
+  simulationQuestionId String
+  selectedOptionId     String?
+  flagged              Boolean   @default(false)
+  isCorrect            Boolean?
+  answeredAt           DateTime?
+
+  attempt            SimulationAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  simulationQuestion SimulationQuestion @relation(fields: [simulationQuestionId], references: [id], onDelete: Cascade)
+  selectedOption     QuestionOption?    @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, simulationQuestionId])
+}
+
+// ─────────────────────────────────────────── goals & notifications ──
+
+model Goal {
+  id        String     @id @default(cuid())
+  userId    String
+  kind      GoalKind
+  period    GoalPeriod
+  target    Float
+  subjectId String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions GoalCompletion[]
+
+  @@index([userId, isActive])
+}
+
+/**
+ * A period in which a goal was reached, recorded when first detected.
+ */
+model GoalCompletion {
+  id          String   @id @default(cuid())
+  goalId      String
+  userId      String
+  periodStart DateTime @db.Date
+  value       Float
+  createdAt   DateTime @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, periodStart])
+  @@index([userId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  href      String?
+  // Prevents the generator from emitting the same notice twice.
+  dedupeKey String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt, createdAt])
+}
+
+model NotificationPreference {
+  id      String           @id @default(cuid())
+  userId  String
+  type    NotificationType
+  enabled Boolean          @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+model CalendarEvent {
+  id            String            @id @default(cuid())
+  userId        String
+  type          CalendarEventType
+  title         String
+  description   String?
+  startsAt      DateTime
+  endsAt        DateTime?
+  allDay        Boolean           @default(false)
+  competitionId String?
+  simulationId  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competition Competition? @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  simulation  Simulation?  @relation(fields: [simulationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startsAt])
+}
+
+// ─────────────────────────────────────────────────── performance ──
+
+model PerformanceSnapshot {
+  id                String   @id @default(cuid())
+  userId            String
+  date              DateTime @db.Date
+  // "global" | "subject:<id>" | "topic:<id>" | "competition:<id>"
+  scopeKey          String
+  questionsAnswered Int      @default(0)
+  questionsCorrect  Int      @default(0)
+  studiedMinutes    Int      @default(0)
+  coverage          Float?
+  readiness         Float?
+  breakdown         Json?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, scopeKey])
+  @@index([userId, scopeKey, date])
+}
+
+model WeeklyReport {
+  id        String   @id @default(cuid())
+  userId    String
+  weekStart DateTime @db.Date
+  data      Json
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+}
+
+// ──────────────────────────────────────────────────────── military ──
+
+model MilitaryTest {
+  id                   String           @id @default(cuid())
+  userId               String
+  studentCompetitionId String?
+  name                 String
+  modality             PhysicalModality
+  unit                 MeasureUnit
+  betterWhen           BetterWhen
+  distanceMeters       Int?
+  targetValue          Float?
+  notes                String?
+  createdAt            DateTime         @default(now())
+
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollment StudentCompetition?  @relation(fields: [studentCompetitionId], references: [id], onDelete: SetNull)
+  results    MilitaryTestResult[]
+
+  @@index([userId])
+}
+
+model MilitaryTestResult {
+  id         String   @id @default(cuid())
+  testId     String
+  userId     String
+  value      Float
+  recordedAt DateTime @db.Date
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  test MilitaryTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([testId, recordedAt])
+}
+
+// ──────────────────────────────────────────────────────── mentor/ai ──
+
+model AiRecommendation {
+  id              String               @id @default(cuid())
+  userId          String
+  kind            RecommendationKind
+  source          RecommendationSource @default(ENGINE)
+  status          RecommendationStatus @default(PENDING)
+  title           String
+  body            String
+  // Human-readable "Por quê?" plus the evidence behind it.
+  reason          String
+  evidence        Json
+  // Machine-applicable change set, and the state needed to undo it.
+  proposedChanges Json
+  previousState   Json?
+  createdAt       DateTime             @default(now())
+  decidedAt       DateTime?
+  undoneAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt])
+}
+
+model MentorMessage {
+  id        String     @id @default(cuid())
+  userId    String
+  role      MentorRole
+  content   String
+  // Structured facts the answer was grounded on (for explainability).
+  grounding Json?
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UserAchievement {
+  id         String   @id @default(cuid())
+  userId     String
+  key        String
+  unlockedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+}
+
+// ──────────────────────────────────────────────────────── rate limits ──
+
+/**
+ * Shared across app instances. Keys are stored hashed, never as email or IP.
+ */
+model RateLimitCounter {
+  keyHash     String
+  windowStart DateTime
+  count       Int      @default(0)
+  expiresAt   DateTime
+
+  @@id([keyHash, windowStart])
+  @@index([expiresAt])
+}
+
+// ──────────────────────────────────────────────────────── past exams ──
+
+enum ExamPaperStatus {
+  UPLOADED
+  EXTRACTING
+  REVIEW
+  PUBLISHED
+  FAILED
+}
+
+/**
+ * An official past exam (one PDF, one version) and its official answer key.
+ */
+model ExamPaper {
+  id            String          @id @default(cuid())
+  competitionId String
+  examBoardId   String?
+  year          Int
+  /**
+   * e.g. "2º dia, prova branca". Answer keys often differ per version.
+   */
+  version       String
+  title         String
+  sourceUrl     String?
+  answerKeyUrl  String?
+  fileHash      String          @unique
+  filePath      String
+  answerKeyPath String?
+  /**
+   * Official key as extracted: [{ number, label, annulled }].
+   */
+  answerKey     Json?
+  answerKeyHash String?
+  /// Sections found in the paper: [{ subject, from, to }].
+  layout        Json?
+  /// Extraction worker lease, so two runs never process the same paper.
+  leaseUntil    DateTime?
+  aiRequests    Int             @default(0)
+  geminiFileUri String?
+  geminiFileAt  DateTime?
+  status        ExamPaperStatus @default(UPLOADED)
+  statusNote    String?
+  expectedCount Int?
+  extractedUpTo Int             @default(0)
+  importedById  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  competition Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  examBoard   ExamBoard?      @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  importedBy  User?           @relation(fields: [importedById], references: [id], onDelete: SetNull)
+  drafts      QuestionDraft[]
+  questions   Question[]
+
+  @@unique([competitionId, year, version])
+  @@index([status])
+}
+
+enum DraftOrigin {
+  EXTRACTED
+  GENERATED
+}
+
+enum DraftStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/**
+ * A question waiting for human review before it enters the shared bank.
+ */
+model QuestionDraft {
+  id            String      @id @default(cuid())
+  origin        DraftOrigin
+  status        DraftStatus @default(PENDING)
+  competitionId String
+  examPaperId   String?
+  number        Int?
+  statement     String
+  /**
+   * [{ label, text }] in display order.
+   */
+  options       Json
+  correctLabel  String?
+  explanation   String?
+  subjectId     String?
+  topicId       String?
+  difficulty    Difficulty?
+  hasFigure     Boolean     @default(false)
+  /// [{ page, box: [ymin, xmin, ymax, xmax] (0–1000), description, file }] in marker order.
+  figures       Json?
+  /**
+   * Problems a reviewer must look at, in Portuguese. Empty means none detected.
+   */
+  issues        String[]
+  aiModel       String
+  /**
+   * Generated drafts: independent solve of the question and references used.
+   */
+  verification  Json?
+  questionId    String?     @unique
+  reviewedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  examPaper   ExamPaper?  @relation(fields: [examPaperId], references: [id], onDelete: Cascade)
+  question    Question?   @relation(fields: [questionId], references: [id], onDelete: SetNull)
+
+  @@index([status, competitionId])
+  @@index([examPaperId, number])
+}

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version; npm --version; try { \\(Get-Command docker -ErrorAction Stop\\).Source } catch { \"docker: nao encontrado\" }; try { \\(Get-Command psql -ErrorAction Stop\\).Source } catch { \"psql: nao encontrado\" }; Get-Content \"$PWD\\\\skills-lock.json\" -ErrorAction SilentlyContinue)",
+      "PowerShell(npm install --no-audit --no-fund 2>&1)"
+    ]
+  }
+}

@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/*
+ * VÉRTICE design tokens
+ * Dark is the reference theme. Light mirrors roles, not hex values.
+ * `fg-subtle` is nudged from the brief's #6F7784 to #7D8592 so small text
+ * meets WCAG AA (≥4.5:1) on both canvas and surface; #6F7784 survives as
+ * `fg-faint` for icons and non-text strokes.
+ */
+
+:root {
+  --canvas: #090b0f;
+  --canvas-2: #101319;
+  --surface: #171b22;
+  --elevated: #1d222b;
+  --line: #292f39;
+  --line-soft: #1f242c;
+  --fg: #f5f7fa;
+  --fg-muted: #a5acb8;
+  --fg-subtle: #7d8592;
+  --fg-faint: #6f7784;
+  --performance: #e1062c;
+  --performance-hover: #f01a3e;
+  --on-performance: #ffffff;
+  --info: #4d7cfe;
+  --positive: #32d583;
+  --warning: #f5b942;
+  --danger: #ff4757;
+  --gold: #c8a45d;
+  --overlay: rgb(3 4 6 / 0.72);
+  --shadow-pop: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 0 0 1px var(--line);
+  /* Charts (validated with the dataviz palette checks against --canvas) */
+  --chart-series: #4d7cfe;
+  --chart-context: #444b56;
+  --chart-grid: #1f242c;
+  --chart-axis: #7d8592;
+  --chart-reference: #6f7784;
+  color-scheme: dark;
+}
+
+:root.light {
+  --canvas: #f6f7f9;
+  --canvas-2: #eef0f3;
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --line: #dbdfe5;
+  --line-soft: #e8ebef;
+  --fg: #0b0d12;
+  --fg-muted: #4a5260;
+  --fg-subtle: #646c79;
+  --fg-faint: #8a919c;
+  --performance: #d1042a;
+  --performance-hover: #b50323;
+  --on-performance: #ffffff;
+  --info: #2f5fe6;
+  --positive: #0e8a55;
+  --warning: #a36500;
+  --danger: #d42b3c;
+  --gold: #8f6f35;
+  --overlay: rgb(11 13 18 / 0.36);
+  --shadow-pop: 0 12px 32px -12px rgb(11 13 18 / 0.22), 0 0 0 1px var(--line);
+  --chart-series: #2f5fe6;
+  --chart-context: #b3b9c2;
+  --chart-grid: #e3e6eb;
+  --chart-axis: #646c79;
+  --chart-reference: #8a919c;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-canvas-2: var(--canvas-2);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-faint: var(--fg-faint);
+  --color-performance: var(--performance);
+  --color-performance-hover: var(--performance-hover);
+  --color-on-performance: var(--on-performance);
+  --color-info: var(--info);
+  --color-positive: var(--positive);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-gold: var(--gold);
+  --color-overlay: var(--overlay);
+  --color-chart-series: var(--chart-series);
+  --color-chart-context: var(--chart-context);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Type scale — 14px body, ratios tuned for dense data screens */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+  --text-md: 1rem;
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.625rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 2.125rem;
+  --text-2xl--line-height: 2.5rem;
+  --text-3xl: 2.875rem;
+  --text-3xl--line-height: 1;
+  --text-display: 4.5rem;
+  --text-display--line-height: 1;
+
+  --radius-control: 6px;
+  --radius-object: 10px;
+  --radius-panel: 14px;
+
+  --shadow-pop: var(--shadow-pop);
+
+  --ease-precise: cubic-bezier(0.2, 0, 0, 1);
+
+  --animate-fade-in: fade-in 160ms var(--ease-precise);
+  --animate-pop-in: pop-in 180ms var(--ease-precise);
+  --animate-sheet-in: sheet-in 240ms var(--ease-precise);
+  --animate-draw: draw 900ms var(--ease-precise) both;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(4px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes sheet-in {
+    from { transform: translateX(100%); }
+    to { transform: none; }
+  }
+  @keyframes draw {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--line);
+  }
+
+  html {
+    background: var(--canvas);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--info) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--fg-subtle);
+  }
+
+  /* Numbers that matter: tabular and slightly tightened */
+  .numeral {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  .hairline-b {
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+}

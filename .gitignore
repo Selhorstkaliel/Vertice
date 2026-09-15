@@ -1,0 +1,24 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+.env
+.env.local
+.env*.local
+
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+Thumbs.db
+
+/prisma/*.db
+/prisma/*.db-journal
+
+.vercel
+coverage/
+
+# Provas importadas, páginas renderizadas e figuras das questões
+/storage/

@@ -1,0 +1,165 @@
+[
+  {
+    "concurso": "afa",
+    "ano": 2026,
+    "versao": "Prova P1, versão A",
+    "prova": "https://www.fab.mil.br/ingresso/arquivos/2025/afa/afa-2026-23-05-2025-P1-vers%C3%A3o-A.pdf",
+    "gabarito": "https://www.fab.mil.br/ingresso/arquivos/2025/afa/afa2026-P1-gabarito-oficial.pdf",
+    "observacao": "O site da FAB bloqueia downloads automáticos: baixe os dois PDFs no navegador e use --pasta."
+  },
+  {
+    "concurso": "afa",
+    "ano": 2025,
+    "versao": "Prova versão A",
+    "prova": "https://www.fab.mil.br/ingresso/arquivos/2024/afa/afa2025_prova_versao_a.pdf",
+    "gabarito": "https://www.fab.mil.br/ingresso/arquivos/2024/afa/afa2025_gab_oficial.pdf",
+    "observacao": "O site da FAB bloqueia downloads automáticos: baixe os dois PDFs no navegador e use --pasta."
+  },
+  {
+    "concurso": "colegio-naval",
+    "ano": 2026,
+    "versao": "1º dia, prova azul",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/CPACN-2026.zip#CPACN-2026/CPACN DIA1 AZUL.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/CPACN%202026_Gab_Final.pdf"
+  },
+  {
+    "concurso": "colegio-naval",
+    "ano": 2026,
+    "versao": "2º dia, prova azul",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/CPACN-2026.zip#CPACN-2026/CPACN DIA2 AZUL.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/CPACN%202026_Gab_Final.pdf"
+  },
+  {
+    "concurso": "colegio-naval",
+    "ano": 2025,
+    "versao": "1º dia, prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/2025-CPACN_0.zip#2025-CPACN 1DIA AMARELO.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/Gab_final_CPACN-2025.pdf"
+  },
+  {
+    "concurso": "colegio-naval",
+    "ano": 2025,
+    "versao": "2º dia, prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/2025-CPACN_0.zip#2025-CPACN 2DIA AMARELO.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/Gab_final_CPACN-2025.pdf"
+  },
+  {
+    "concurso": "eam",
+    "ano": 2026,
+    "versao": "Prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/CPAEAM.zip#CPAEAM AMA.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/GAB_FINAL_CPAEAM-2026.pdf"
+  },
+  {
+    "concurso": "eam",
+    "ano": 2025,
+    "versao": "Prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/2025-CPAEAM%202025%20AMARELA.zip#2025-CPAEAM 2025 AMARELA.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/GAB_DIV_CPAEAM-2025_final.pdf"
+  },
+  {
+    "concurso": "efomm",
+    "ano": 2026,
+    "versao": "1º dia, prova branca",
+    "prova": "https://assets.marinha.mil.br/ciaga/sites/www.marinha.mil.br.ciaga/files/Processos%20Seletivos/PROVA%20BRANCA%201%20DIA.pdf",
+    "gabarito": "https://assets.marinha.mil.br/ciaga/sites/www.marinha.mil.br.ciaga/files/Processos%20Seletivos/PS%20EFOMM%202026%20-%20GABARITO%20definitivo.pdf"
+  },
+  {
+    "concurso": "efomm",
+    "ano": 2026,
+    "versao": "2º dia, prova branca",
+    "prova": "https://assets.marinha.mil.br/ciaga/sites/www.marinha.mil.br.ciaga/files/Processos%20Seletivos/PROVA%20BRANCA%202%20DIA.pdf",
+    "gabarito": "https://assets.marinha.mil.br/ciaga/sites/www.marinha.mil.br.ciaga/files/Processos%20Seletivos/PS%20EFOMM%202026%20-%20GABARITO%20definitivo.pdf"
+  },
+  {
+    "concurso": "esa",
+    "ano": 2025,
+    "versao": "Área geral, tipo A",
+    "prova": "https://esa.eb.mil.br/PROVA_25_RETIFICADA_-_GERAL_A.pdf",
+    "gabarito": "https://esa.eb.mil.br/1._GABARITO_DEFINITIVO_CA_2025_-_GERAL_ATLZ_13_OUT_25_-_GERAL.pdf"
+  },
+  {
+    "concurso": "escola-naval",
+    "ano": 2025,
+    "versao": "1º dia, prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/EN%202025.zip#PROVAS 2025/CPAEN D1 Amarela.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/GabFINAL_CPAEN-2025.pdf"
+  },
+  {
+    "concurso": "escola-naval",
+    "ano": 2025,
+    "versao": "2º dia, prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/EN%202025.zip#PROVAS 2025/CPAEN D2 Amarela.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/GabFINAL_CPAEN-2025.pdf"
+  },
+  {
+    "concurso": "escola-naval",
+    "ano": 2024,
+    "versao": "1º dia, prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/2024-CPAEN.zip#2024-CPAEN 1dia amarela_0.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/CPAEN-2024_gab_final.pdf"
+  },
+  {
+    "concurso": "escola-naval",
+    "ano": 2024,
+    "versao": "2º dia, prova amarela",
+    "prova": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/provas/2024-CPAEN.zip#2024-CPAEN 2dia amarela.pdf",
+    "gabarito": "https://assets.marinha.mil.br/sspm/sites/www.marinha.mil.br.sspm/files/arquivo/gabaritos/CPAEN-2024_gab_final.pdf"
+  },
+  {
+    "concurso": "espcex",
+    "ano": 2026,
+    "versao": "1º dia, versão 1",
+    "prova": "https://www.espcex.eb.mil.br/images/concurso/provas/prova2026/Prova_1_DIA.pdf",
+    "gabarito": "https://www.espcex.eb.mil.br/images/concurso/provas/prova2026/Gabarito_1_DIA.pdf"
+  },
+  {
+    "concurso": "espcex",
+    "ano": 2026,
+    "versao": "2º dia, versão 1",
+    "prova": "https://www.espcex.eb.mil.br/images/concurso/provas/prova2026/Prova_2_DIA.pdf",
+    "gabarito": "https://www.espcex.eb.mil.br/images/concurso/provas/prova2026/Gabarito_2_DIA.pdf"
+  },
+  {
+    "concurso": "espcex",
+    "ano": 2025,
+    "versao": "1º dia, modelo A",
+    "prova": "https://www.espcex.eb.mil.br/images/concurso/provas/provas2025/2025%20PROVA%20MODELO%20A.pdf",
+    "gabarito": "https://www.espcex.eb.mil.br/images/concurso/2025_publConcurso/gabarito/gabarito_primeiro_dia_final.pdf"
+  },
+  {
+    "concurso": "espcex",
+    "ano": 2025,
+    "versao": "2º dia, modelo D",
+    "prova": "https://www.espcex.eb.mil.br/images/concurso/provas/provas2025/2025%20PROVA%20MODELO%20D.pdf",
+    "gabarito": "https://www.espcex.eb.mil.br/images/concurso/2025_publConcurso/gabarito/gabarito_segundo_dia_final.pdf"
+  },
+  {
+    "concurso": "ime",
+    "ano": 2026,
+    "versao": "1ª fase, prova objetiva",
+    "prova": "https://www.ime.eb.mil.br/images/arquivos/admissao/cfg/provas-anteriores/2025-2026/Prova1fase2025OBJETIVA.pdf",
+    "gabarito": "https://www.ime.eb.mil.br/images/arquivos/admissao/cfg/provas-anteriores/2025-2026/Gabarito_FINAL_2025-2026OBJETIVA.pdf"
+  },
+  {
+    "concurso": "ime",
+    "ano": 2025,
+    "versao": "1ª fase, prova objetiva",
+    "prova": "https://www.ime.eb.mil.br/images/arquivos/admissao/cfg/provas-anteriores/2024-2025/CFG_Objetiva_24_25.pdf",
+    "gabarito": "https://www.ime.eb.mil.br/images/arquivos/admissao/cfg/provas-anteriores/2024-2025/GabaritoFINAL20242025.pdf"
+  },
+  {
+    "concurso": "ita",
+    "ano": 2026,
+    "versao": "1ª fase",
+    "prova": "https://www.vestibular.ita.br/provas/2026_fase1.pdf",
+    "gabarito": "https://www.vestibular.ita.br/provas/gabarito_2026.pdf"
+  },
+  {
+    "concurso": "ita",
+    "ano": 2025,
+    "versao": "1ª fase",
+    "prova": "https://www.vestibular.ita.br/provas/2025_fase1.pdf",
+    "gabarito": "https://www.vestibular.ita.br/provas/gabarito_2025.pdf"
+  }
+]

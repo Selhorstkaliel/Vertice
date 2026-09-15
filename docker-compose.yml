@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vertice-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vertice
+      POSTGRES_PASSWORD: vertice_dev
+      POSTGRES_DB: vertice
+    ports:
+      - "5433:5432"
+    volumes:
+      - vertice-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vertice -d vertice"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vertice-pgdata:
