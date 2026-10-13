@@ -8,6 +8,9 @@ const schema = z.object({
     .string()
     .min(32, "SESSION_SECRET precisa ter pelo menos 32 caracteres."),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  // Public landing page (the Vite project in landing/). The app root redirects visitors there.
+  // Empty means "not configured": the root falls back to the sign-in screen.
+  NEXT_PUBLIC_LANDING_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
   // Which AI serves the Mentor: "anthropic" (Claude), "gemini" (Google) or any "openai-compatible" API.
   MENTOR_PROVIDER: z.enum(["anthropic", "gemini", "openai-compatible"]).default("anthropic"),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),

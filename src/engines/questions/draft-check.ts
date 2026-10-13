@@ -39,10 +39,34 @@ export interface DraftCheck {
 
 const LABELS = ["A", "B", "C", "D", "E"];
 const FIGURE_WORDS = /\b(figura|gr[aá]fico|imagem|ilustra[cç][aã]o|diagrama|esquema|tabela abaixo|mapa)\b/i;
+const BASE_TEXT_WORDS =
+  /\b(texto[s]? (acima|abaixo|a seguir|[IVX]+|\d)|texto [A-Z]{2}\d[A-Z]\d|text [1-9]|n[oa] texto|d[oa] texto|segundo o (autor|texto)|de acordo com (o|as informações do) texto|tirinha|charge|poema|fragmento acima|trecho acima|excerto)\b/i;
+/**
+ * Provas agrupam vários itens sob um mesmo texto-base, e a transcrição às vezes
+ * fica só com o comando da questão: o aluno recebe "de acordo com o texto I,
+ * pode-se inferir que" sem texto nenhum. Um enunciado que manda ler um texto e
+ * é curto demais para contê-lo perdeu o texto pelo caminho.
+ */
+const BASE_TEXT_MIN_LENGTH = 700;
+
+export function missingBaseText(statement: string) {
+  const text = statement.trim();
+  return text.length < BASE_TEXT_MIN_LENGTH && BASE_TEXT_WORDS.test(text);
+}
 const GARBLED = new RegExp(`[${String.fromCharCode(0xfffd)}${String.fromCharCode(0)}-${String.fromCharCode(8)}]|\\?{3,}`);
 
 export function normalizeLabel(label: string) {
   return label.trim().replace(/[().\s]/g, "").toUpperCase().slice(0, 1);
+}
+
+/**
+ * Item de julgamento (certo ou errado), o formato do Cebraspe: duas alternativas,
+ * C para "Certo" e E para "Errado". O resto do fluxo trata igual às de A a E.
+ */
+export function isTrueFalse(options: { label: string; text: string }[]) {
+  if (options.length !== 2) return false;
+  const pares = options.map((o) => `${normalizeLabel(o.label)}:${o.text.trim().toLowerCase()}`).sort();
+  return pares[0] === "C:certo" && pares[1] === "E:errado";
 }
 
 /**
@@ -69,6 +93,7 @@ export function checkDraft(input: DraftInput, key: OfficialKeyEntry[] | null, { 
   if (uncropped.length) issues.push(`Figura ${uncropped.join(", ")} sem imagem recortada.`);
   else if (input.figures.length && !reviewed) issues.push("Confira o recorte das figuras: ele foi feito automaticamente.");
   if (!input.figures.length && FIGURE_WORDS.test(input.statement) && !reviewed) issues.push("O enunciado cita figura, gráfico ou tabela: confirme se a questão precisa de imagem.");
+  if (missingBaseText(input.statement) && !reviewed) issues.push("O enunciado manda ler um texto-base que não está na questão: transcreva o texto antes de publicar.");
   if (input.unmatchedNumbers?.length && !reviewed) issues.push(`Confira no PDF estes números da transcrição: ${input.unmatchedNumbers.slice(0, 6).join(", ")}.`);
 
   let correctLabel: string | null = null;

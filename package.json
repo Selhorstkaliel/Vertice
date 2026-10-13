@@ -22,7 +22,9 @@
     "db:seed:demo": "node --env-file=.env --conditions=react-server --import tsx prisma/seed-demo.ts",
     "mentor:check": "node --env-file=.env --conditions=react-server --import tsx scripts/mentor-check.ts",
     "provas": "node --env-file=.env --conditions=react-server --import tsx scripts/provas.ts",
-    "test:provas": "node tests/e2e/run-exam-bank.mjs"
+    "test:provas": "node tests/e2e/run-exam-bank.mjs",
+    "figuras": "node --env-file=.env --conditions=react-server --import tsx scripts/_figuras.ts",
+    "recorte": "node --env-file=.env --conditions=react-server --import tsx scripts/_recorte.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

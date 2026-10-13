@@ -1,4 +1,8 @@
 import "server-only";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { fileExists, loadFile, saveFile } from "@/lib/storage";
 import type { Box } from "@/engines/questions/rich-text";
@@ -11,10 +15,55 @@ import { refineBox } from "@/engines/questions/figure-box";
 
 const RENDER_SCALE = 2;
 
+/**
+ * Scanned exams store each page as a JBIG2 or JPEG 2000 image, which pdf.js decodes
+ * em WebAssembly. Sem este caminho os decodificadores falham e toda página sai em
+ * branco, levando junto os recortes das figuras.
+ *
+ * O caminho é procurado na hora de abrir um PDF, e não ao carregar o módulo: o
+ * admin importa este arquivo em telas que nem chegam a abrir prova, e uma falha
+ * aqui derrubaria a página inteira.
+ */
+let cached: string | undefined;
+
+function wasmDir() {
+  if (cached) return cached;
+  // A raiz do projeto vem primeiro porque é a única que vale em toda camada do
+  // Next: no bundle de Server Actions, `import.meta.url` aponta para dentro de
+  // .next e `createRequire` nem sempre resolve. PDFJS_WASM_DIR existe para
+  // hospedagens que movem node_modules.
+  const candidates = [
+    process.env.PDFJS_WASM_DIR,
+    path.join(process.cwd(), "node_modules", "pdfjs-dist", "wasm"),
+    resolveFromModule(),
+  ].filter((dir): dir is string => !!dir);
+
+  const found = candidates.find((dir) => {
+    try {
+      return existsSync(path.join(dir, "jbig2.wasm"));
+    } catch {
+      return false;
+    }
+  });
+  // Nenhum candidato pôde ser conferido (fs indisponível nesta camada): segue com
+  // a raiz do projeto, que é onde o pacote fica numa instalação normal.
+  const dir = found ?? candidates[0]!;
+  cached = pathToFileURL(dir + path.sep).href;
+  return cached;
+}
+
+function resolveFromModule() {
+  try {
+    return path.join(path.dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json")), "wasm");
+  } catch {
+    return undefined;
+  }
+}
+
 async function openPdf(file: string) {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const data = new Uint8Array(await loadFile("provas", file));
-  const task = pdfjs.getDocument({ data, verbosity: 0 });
+  const task = pdfjs.getDocument({ data, verbosity: 0, wasmUrl: wasmDir() });
   const doc = await task.promise;
   return Object.assign(doc, { close: () => task.destroy() });
 }

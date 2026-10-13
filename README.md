@@ -50,6 +50,7 @@ Os concursos do catálogo vêm marcados como **não verificados**: não há data
 | `DATABASE_URL` | Sim | Conexão com o PostgreSQL. O `.env.example` já aponta para o `docker-compose.yml`. |
 | `SESSION_SECRET` | Sim | Pelo menos 32 caracteres. Assina os tokens de sessão e de recuperação de senha. O valor de exemplo é recusado em produção. |
 | `NEXT_PUBLIC_APP_URL` | Não | URL pública, usada nos links de recuperação de senha. Padrão: `http://localhost:3000`. |
+| `NEXT_PUBLIC_LANDING_URL` | Não | Endereço da landing (projeto em `landing/`). A raiz do aplicativo redireciona visitantes não autenticados para lá; sem ela, o redirecionamento vai para `/entrar`. |
 | `MENTOR_PROVIDER` | Não | Provedor de IA do Mentor: `gemini`, `anthropic` ou `openai-compatible`. Padrão: `anthropic`. Sem provedor configurado, o Mentor oferece só análises automáticas calculadas com regras. |
 | `GEMINI_API_KEY` | Com `gemini` | Chave do Google AI Studio. |
 | `ANTHROPIC_API_KEY` | Com `anthropic` | Chave da Anthropic. |
@@ -82,11 +83,11 @@ Todas as questões do banco vêm de provas anteriores publicadas pelos próprios
 
 1. **Importação.** Pela tela `/admin/provas` (envio do PDF ou endereço oficial) ou pelo comando `npm run provas -- importar`, que usa a lista `prisma/provas-oficiais.json`. O gabarito oficial é importado junto; prefira o definitivo.
 2. **Leitura.** A IA do Gemini lê o gabarito e transcreve as questões em lotes, com fórmulas em LaTeX e a posição de cada figura. As figuras são recortadas automaticamente da página.
-3. **Conferências automáticas.** A resposta de cada questão vem sempre do gabarito oficial. Questões anuladas saem da fila. A IA resolve cada questão sem ver o gabarito e, quando chega a outra letra, a explicação é refeita a partir do gabarito e a questão fica marcada para revisão. Números da transcrição que não aparecem no texto do PDF, figuras e textos corrompidos também viram pendências.
+3. **Conferências automáticas.** A resposta de cada questão vem sempre do gabarito oficial, lido do texto do PDF quando ele traz as letras e conferido à mão quando a banca só marca a alternativa com um círculo. Questões anuladas saem da fila. A IA resolve cada questão sem ver o gabarito e, quando chega a outra letra, a explicação é refeita a partir do gabarito e a questão fica marcada para revisão. Números da transcrição que não aparecem no texto do PDF, figuras e textos corrompidos também viram pendências.
 4. **Revisão.** Um administrador confere cada questão ao lado da prévia de como o aluno verá, ajusta o recorte das figuras (arrastando sobre a página) e publica. O botão "Publicar sem pendências" publica de uma vez as que passaram por todas as conferências.
 5. **Para o aluno.** A questão aparece como "Prova oficial", com concurso, ano, versão e número. A resolução traz o aviso de que foi escrita com IA e conferida com o gabarito.
 
-Questões geradas (`/admin/geradas`) usam as questões oficiais publicadas de cada concurso como referência de estilo, passam por uma resolução independente e por uma checagem de semelhança com as oficiais, e aparecem para o aluno como "Gerada por IA", nunca como oficiais.
+Questões geradas (`/admin/geradas`, ou `npm run provas -- gerar`) usam as questões oficiais publicadas de cada concurso como referência de estilo, passam por uma resolução independente e por uma checagem de semelhança com as oficiais, e aparecem para o aluno como "Gerada por IA", nunca como oficiais.
 
 ### Comandos
 
@@ -98,11 +99,28 @@ npm run provas -- continuar                    # retoma leituras pausadas pelo l
 npm run provas -- situacao                     # resumo por prova
 npm run provas -- reverificar                  # reaplica gabarito e conferências nas provas já lidas
 npm run provas -- publicar                     # publica as questões sem nenhuma pendência
+npm run provas -- gerar --concurso=efomm       # gera questões no estilo das oficiais já publicadas
+npm run provas -- gerar --quantidade=5 --publicar  # gera para todos os concursos e publica as sem pendências
 npm run provas -- limpar                       # apaga figuras e páginas que nenhuma questão usa
 npm run provas -- arquivo efomm 2026 "2º dia, prova branca" prova.pdf gabarito.pdf --fonte=URL
+npm run provas -- gabarito <id da prova> gabarito.json   # grava um gabarito conferido à mão
 ```
 
 A lista aceita PDFs dentro de arquivos ZIP oficiais (`https://…/provas.zip#pasta/prova.pdf`). Alguns sites, como o da Força Aérea, só abrem no navegador: baixe os PDFs e rode `importar --pasta=<pasta do download>`.
+
+### Gabarito conferido à mão
+
+A resposta oficial é lida de três formas, da mais confiável para a menos: o que está escrito na camada de texto do PDF do gabarito manda; a leitura por IA cobre o que o texto não entrega; e, quando nenhuma das duas serve, o gabarito é digitado à mão.
+
+Isso importa porque algumas bancas não escrevem a letra. A ESA, por exemplo, publica a folha de respostas com as cinco alternativas impressas e a correta marcada por um círculo preenchido: não há letra no texto do arquivo, e a leitura por imagem erra bastante. Nesses casos, confira o PDF e grave o gabarito:
+
+```json
+{ "kind": "DEFINITIVO",
+  "sections": [{ "versao": "A", "secao": "GERAL", "de": 1,
+                 "respostas": "ANULADA C A ANULADA A A A E D ANULADA B D …" }] }
+```
+
+`npm run provas -- gabarito <id da prova> gabarito.json` grava o arquivo e reaplica a resposta em todas as questões da prova — inclusive nas já publicadas, que têm a alternativa correta corrigida no banco.
 
 ### Custo e cota
 
@@ -134,6 +152,7 @@ As provas, páginas e figuras ficam em `STORAGE_DIR`. Os PDFs são enviados ao G
 ## Estrutura
 
 ```
+landing/           landing page pública (Vite + React), publicada separadamente
 prisma/            schema, migrações, catálogo, lista de provas oficiais e seeds
 scripts/           comandos de linha: provas oficiais e verificação do Mentor
 storage/           PDFs importados, páginas e figuras (fora do git)
@@ -150,7 +169,7 @@ Toda consulta é filtrada pelo usuário da sessão e toda ação valida a entrad
 ## Produção
 
 - Use HTTPS. Em produção o cookie de sessão é `__Host-vertice_session`, que exige conexão segura.
-- Defina `NODE_ENV=production`, um `SESSION_SECRET` próprio e `NEXT_PUBLIC_APP_URL` com o domínio real.
+- Defina `NODE_ENV=production`, um `SESSION_SECRET` próprio e `NEXT_PUBLIC_APP_URL` com o domínio real. Defina também `NEXT_PUBLIC_LANDING_URL` com o endereço da landing: a raiz do aplicativo redireciona para ela.
 - Rode `npm run db:deploy` antes de iniciar a nova versão.
 - Coloque a aplicação atrás de um proxy reverso que sobrescreva o cabeçalho `X-Forwarded-For`. O limite de tentativas por IP usa esse cabeçalho, e um cliente pode forjá-lo quando acessa o servidor diretamente. O limite por conta continua valendo mesmo nesse caso.
 - Os limites de tentativas ficam no PostgreSQL e valem para todas as instâncias da aplicação ao mesmo tempo.

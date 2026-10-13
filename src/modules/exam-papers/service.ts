@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { DomainError } from "@/lib/action";
 import { downloadPublicFile, PublicDownloadError } from "@/lib/public-download";
 import { imageType, isPdf, removeFile, saveFile, sha256 } from "@/lib/storage";
+import { isTrueFalse } from "@/engines/questions/draft-check";
 import type { DraftOption } from "@/engines/questions/draft-check";
 import { padBox, type Box } from "@/engines/questions/rich-text";
 import { cropImage, pdfPageCount, renderPage } from "./pdf";
@@ -220,7 +221,8 @@ export async function saveDraft(id: string, edit: DraftEdit, approve: boolean) {
     const question = await tx.question.create({
       data: {
         ...questionData,
-        type: "MULTIPLE_CHOICE",
+        // Prova de julgamento de itens entra como certo ou errado; o resto, como múltipla escolha.
+        type: isTrueFalse(check.options) ? "TRUE_FALSE" : "MULTIPLE_CHOICE",
         competitionId: draft.competitionId,
         examBoardId: draft.examPaper?.examBoardId ?? draft.competition.examBoardId,
         year: draft.examPaper?.year ?? null,

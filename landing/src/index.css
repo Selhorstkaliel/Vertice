@@ -1,0 +1,144 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+
+/*
+ * VÉRTICE — Luxury Performance UI
+ * A página é escura por definição (não há tema claro na landing).
+ * `fg-subtle` fica em #7D8592 para texto pequeno atingir AA sobre canvas e cards.
+ * Vermelho (performance) é reservado para ação, estado ativo e progresso.
+ */
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: #090b0f;
+  --color-canvas-2: #101319;
+  --color-surface: #171b22;
+  --color-elevated: #1d222b;
+  --color-line: #292f39;
+  --color-line-soft: #1f242c;
+  --color-line-strong: #3a414d;
+
+  --color-fg: #f5f7fa;
+  --color-fg-muted: #a5acb8;
+  --color-fg-subtle: #7d8592;
+  --color-fg-faint: #5c6370;
+
+  --color-performance: #e1062c;
+  --color-performance-hover: #f01a3e;
+  --color-info: #4d7cfe;
+  --color-positive: #32d583;
+  --color-warning: #f5b942;
+  --color-danger: #ff4757;
+
+  --radius-control: 10px;
+  --radius-card: 16px;
+  --radius-window: 20px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-marquee: marquee 60s linear infinite;
+  --animate-rise: rise 0.8s var(--ease-out-soft) both;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background-color: rgb(225 6 44 / 0.35);
+    color: var(--color-fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-fg);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* O cabeçalho é fixo: âncoras e elementos que recebem foco param abaixo dele. */
+  [id],
+  a,
+  button,
+  [tabindex] {
+    scroll-margin-top: 96px;
+  }
+
+  a,
+  button,
+  [role="button"],
+  [role="switch"],
+  [role="radio"],
+  summary {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgb(225 6 44 / 0.15);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility numeral {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility text-pretty {
+  text-wrap: pretty;
+}
+
+/* Grade de precisão: linhas finas que somem nas bordas. Só no hero e no CTA final. */
+@utility precision-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 20%, transparent 75%);
+}

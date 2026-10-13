@@ -1,4 +1,9 @@
-@import "tailwindcss";
+/*
+ * `source("../")` limita a busca por classes ao src/. Sem isso o Tailwind varre o projeto
+ * inteiro — inclusive a landing em landing/ e arquivos já compilados — e trata trechos de
+ * código como classes, o que chega a quebrar o build com URLs inexistentes.
+ */
+@import "tailwindcss" source("../");
 
 /*
  * VÉRTICE design tokens
@@ -172,6 +177,20 @@
 
   ::selection {
     background: color-mix(in oklab, var(--info) 35%, transparent);
+  }
+
+  /*
+   * A lista de um <select> é desenhada pelo navegador, e não herda as cores do campo:
+   * sem isto, as opções saem no cinza padrão do sistema e somem no fundo escuro.
+   */
+  option,
+  optgroup {
+    background-color: var(--surface);
+    color: var(--fg);
+  }
+
+  option:disabled {
+    color: var(--fg-subtle);
   }
 
   :focus-visible {

@@ -12,8 +12,8 @@ import { formatMeasure, parseMeasure, summarizeTaf } from "./military/taf";
 import { goalStatus, periodRange, previousPeriod } from "./goals/goals";
 import { evaluateAchievements, levelFor, longestStreak } from "./progress/achievements";
 import { decide, windowStart } from "./security/sliding-window";
-import { checkDraft, extractionBatches } from "./questions/draft-check";
-import { keyForQuestion, keyLetter, reconcileWithKey, resolvePaperKey, sameSubject } from "./questions/answer-key";
+import { checkDraft, extractionBatches, missingBaseText } from "./questions/draft-check";
+import { correctKeyFromText, keyForQuestion, keyLetter, keyPairsFromText, reconcileWithKey, resolvePaperKey, sameSubject } from "./questions/answer-key";
 import { figureMarkers, numbersMissingFromSource, padBox, parseRich, richToPlain } from "./questions/rich-text";
 import { refineBox } from "./questions/figure-box";
 import type { RoutineBlockInput } from "./types";
@@ -522,6 +522,20 @@ test("answer key: version and subject matching, changed answers, restarted numbe
   assert.equal(enDay2.entries.map((e) => e.label).join(""), "DCBA");
   assert.equal(sameSubject("1º Dia - Prova de Matemática", "2º Dia - Prova de Física"), false);
   assert.equal(sameSubject("Português, Estudos sociais e Ciências", "portugues"), true);
+
+  // Colégio Naval: um gabarito, os dois dias, numeração repetida. O dia com 50
+  // questões é o que termina no 50; sem essa conta os números em comum ficavam sem resposta.
+  const cn = [block("AZUL", "Matemática e Inglês", 1, "ABCD"), block("AZUL", "Português, Estudos sociais e Ciências", 1, "DCBA".repeat(2))];
+  assert.equal(resolvePaperKey("2º dia, prova azul", [], cn, 8).entries.map((e) => e.label).join(""), "DCBADCBA");
+  assert.equal(resolvePaperKey("1º dia, prova azul", [], cn, 4).entries.map((e) => e.label).join(""), "ABCD");
+  assert.equal(keyForQuestion(resolvePaperKey("2º dia, prova azul", [], cn).entries, 2, []).some((e) => e.number === 2), false, "sem a contagem o empate continua sem resposta");
+
+  // Cesgranrio: a leitura descreveu só as duas primeiras disciplinas, mas o gabarito
+  // tem todas — as questões de fora do mapa não podem ficar sem resposta oficial.
+  const cesgranrio = [block("", "LÍNGUA PORTUGUESA", 1, "AB"), block("", "MATEMÁTICA", 3, "CD"), block("", "CONHECIMENTOS BANCÁRIOS", 5, "EA")];
+  const parcial = resolvePaperKey("Técnico Bancário", [{ subject: "portugues", from: 1, to: 2 }, { subject: "matematica", from: 3, to: 4 }], cesgranrio);
+  assert.equal(parcial.entries.map((e) => e.label).join(""), "ABCDEA");
+  assert.equal(parcial.entries.find((e) => e.number === 6)?.label, "A");
 });
 
 test("answer key corrects the question count only when it has one block for the version", () => {
@@ -537,6 +551,40 @@ test("answer key corrects the question count only when it has one block for the 
   assert.deepEqual(reconcileWithKey("prova branca", [block("BRANCA", "GERAL", 40)], map, 40, 200), { expected: 40, layout: map });
   assert.equal(keyLetter("(c)"), "C");
   assert.equal(keyLetter("ANULADA"), null);
+});
+
+test("a question that sends the student to a base text it does not carry is flagged", () => {
+  assert.equal(missingBaseText("A partir da leitura do texto I, pode-se inferir que:"), true);
+  assert.equal(missingBaseText("Em relação a aspectos estruturais do texto CB1A1, julgue o item."), true);
+  assert.equal(missingBaseText("Analyze the statements about the fragments in Text 1, then choose the correct option."), true);
+  assert.equal(missingBaseText("O humor da tirinha se encontra na expressão:"), true);
+  // Com o texto-base transcrito, o enunciado deixa de ser um comando solto.
+  assert.equal(missingBaseText(`${"A charge mostra um menino na caixa de areia. ".repeat(20)}\n\nO humor da tirinha se encontra na expressão:`), false);
+  assert.equal(missingBaseText("Calcule a área do triângulo de lados 3, 4 e 5 cm."), false);
+});
+
+test("the printed answer key corrects the one the AI read", () => {
+  // Cebraspe: uma faixa de números e, na sequência, as letras; "0" são células vazias da tabela.
+  const cebraspe = "CONCURSO 1 2 3 4 5 6 7 8 9 10 E C E E E C E C C E 11 12 13 14 15 16 17 18 19 20 0 0 E E E C C C E E C X Item Gabarito";
+  const pairs = keyPairsFromText(cebraspe)!;
+  assert.equal(pairs.size, 20);
+  assert.equal(pairs.get(2)!.label, "C");
+  assert.equal(pairs.get(20)!.annulled, true);
+  // Duas versões lado a lado não dizem qual é qual, e um texto curto não dá base.
+  assert.equal(keyPairsFromText(`${cebraspe} 1 2 3 4 5 6 7 8 9 10 C E C C C E C E E C`), null);
+  assert.equal(keyPairsFromText("1 2 3 4 5 E C E E E"), null);
+
+  // A IA trocou os itens 5 e 6 de lugar: o texto do PDF desfaz a troca e o resto fica como está.
+  const lido = [{ version: "", section: "CARGO", answers: [...pairs].map(([number, a]) => ({ number, ...a })) }];
+  lido[0]!.answers[4] = { number: 5, label: "C", annulled: false };
+  lido[0]!.answers[5] = { number: 6, label: "E", annulled: false };
+  const { sections, corrected } = correctKeyFromText(lido, cebraspe);
+  assert.equal(corrected, 2);
+  assert.equal(sections[0]!.answers[4]!.label, "E");
+  assert.equal(sections[0]!.answers[5]!.label, "C");
+  assert.equal(sections[0]!.section, "CARGO", "o bloco lido pela IA é preservado");
+  // Com mais de um bloco não dá para saber a qual versão o texto se refere.
+  assert.equal(correctKeyFromText([...lido, ...lido], cebraspe).corrected, 0);
 });
 
 test("rich text: inline and display math, money signs, figure markers, crop boxes", () => {

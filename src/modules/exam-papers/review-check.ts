@@ -44,14 +44,14 @@ export interface EvaluatedDraft {
   origin: DraftOrigin;
   number: number | null;
   verification: Prisma.JsonValue;
-  examPaper: { version: string; layout: Prisma.JsonValue; answerKey: Prisma.JsonValue } | null;
+  examPaper: { version: string; layout: Prisma.JsonValue; answerKey: Prisma.JsonValue; expectedCount?: number | null } | null;
 }
 
 /** Key entries of a paper (all subjects of its version), or null when it has no key. */
 export function paperKey(paper: EvaluatedDraft["examPaper"]) {
   const key = paper?.answerKey as StoredAnswerKey | null | undefined;
   if (!paper || !key) return { entries: null, note: null };
-  return resolvePaperKey(paper.version, (paper.layout as PaperSection[] | null) ?? [], key.sections);
+  return resolvePaperKey(paper.version, (paper.layout as PaperSection[] | null) ?? [], key.sections, paper.expectedCount);
 }
 
 /**

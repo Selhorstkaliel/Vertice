@@ -6,10 +6,18 @@
  *   npm run provas -- importar --concurso=efomm         # só as provas de um concurso da lista
  *   npm run provas -- importar --pasta=C:\Downloads     # usa PDFs/ZIPs já baixados nessa pasta (sites que só abrem no navegador)
  *   npm run provas -- arquivo <concurso> <ano> "<versão>" prova.pdf [gabarito.pdf] [--fonte=URL] [--fonte-gabarito=URL]
- *   npm run provas -- continuar                         # retoma extrações pausadas (limite diário) ou com falha
+ *   npm run provas -- continuar [--prova=<id>]          # retoma extrações pausadas (limite diário) ou com falha
  *   npm run provas -- situacao                          # resumo por prova
  *   npm run provas -- reverificar                       # reaplica gabarito e conferências nas provas já lidas
+ *   npm run provas -- paginas <id> [de] [ate]           # gera as imagens das páginas (leitura manual e conferência)
+ *   npm run provas -- resolver [--prova=<id>]           # escreve as resoluções que faltam nas provas já lidas
+ *   npm run provas -- transcrever <id> questoes.json    # grava uma transcrição feita fora da leitura automática
+ *   npm run provas -- gabarito <id> gabarito.json       # grava um gabarito conferido à mão e o reaplica nas questões
+ *   npm run provas -- textos [--prova=<id>]             # recupera os textos-base que a transcrição deixou de fora
+ *   npm run provas -- disciplinas [--prova=<id>] [--ia] # classifica as questões sem disciplina (bloco do gabarito; --ia usa o enunciado)
  *   npm run provas -- publicar                          # publica as questões sem nenhuma pendência das provas lidas por completo
+ *   npm run provas -- gerar [--concurso=efomm]          # gera questões no estilo das oficiais já publicadas
+ *              [--quantidade=3] [--rodadas=2] [--publicar]
  *   npm run provas -- limpar                            # apaga figuras e páginas que nenhuma questão usa mais
  *
  * A leitura usa a API do Gemini (GEMINI_API_KEY). No plano gratuito o limite
@@ -23,9 +31,15 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { DomainError } from "@/lib/action";
 import { availableModels, questionAiConfigured } from "@/modules/ai/gemini";
-import { refreshPaper, runPaperExtraction } from "@/modules/exam-papers/extract";
-import { isPdf, listFiles, removeFile } from "@/lib/storage";
+import { classifyDraftsByContent, fillMissingBaseTexts, recheckPaperDrafts, refreshPaper, runPaperExtraction, saveTranscribedQuestions, type TranscribedQuestion } from "@/modules/exam-papers/extract";
+import { isPdf, listFiles, removeFile, storagePath } from "@/lib/storage";
 import { approveCleanDrafts, createExamPaper, downloadFile } from "@/modules/exam-papers/service";
+import { generateStyleQuestions, MAX_GENERATED_PER_RUN } from "@/modules/exam-papers/generate";
+import { pageImageName, pdfPageCount, renderPage } from "@/modules/exam-papers/pdf";
+import { missingBaseText } from "@/engines/questions/draft-check";
+import { loadCompetitionCatalog, matchSubject } from "@/modules/exam-papers/catalog";
+import { paperKey } from "@/modules/exam-papers/review-check";
+import type { StoredAnswerKey } from "@/modules/exam-papers/review-check";
 
 /**
  * A manifest address may point inside an official ZIP: "https://…/provas.zip#pasta/prova.pdf".
@@ -76,6 +90,7 @@ interface ManifestEntry {
 
 const [command, ...rest] = process.argv.slice(2);
 const flag = (name: string) => rest.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
+const has = (name: string) => rest.includes(`--${name}`);
 const positional = rest.filter((a) => !a.startsWith("--"));
 const log = (message: string) => console.log(`  ${message}`);
 
@@ -97,6 +112,40 @@ async function competitionId(slug: string) {
   const competition = await db.competition.findFirst({ where: { slug, ownerId: null }, select: { id: true } });
   if (!competition) throw new DomainError(`Concurso "${slug}" não existe no catálogo. Rode npm run db:seed.`);
   return competition.id;
+}
+
+/**
+ * Gabarito conferido à mão. Algumas bancas publicam a folha de respostas com a
+ * alternativa marcada por um círculo preenchido, e não por uma letra: aí a
+ * leitura automática erra e só a conferência humana resolve.
+ *
+ * Aceita o formato guardado no banco ou um bloco enxuto:
+ *   { "versao": "A", "secao": "GERAL", "de": 1,
+ *     "respostas": "ANULADA C A ANULADA A A A E D ANULADA B …" }
+ * Cada resposta é a letra da alternativa; "ANULADA", "ANUL" ou "X" marcam a
+ * questão anulada.
+ */
+function readManualKey(raw: unknown): StoredAnswerKey {
+  const blocks = Array.isArray(raw) ? raw : ((raw as { sections?: unknown[] }).sections ?? [raw]);
+  const sections = (blocks as Record<string, unknown>[]).map((block) => {
+    const version = String(block.version ?? block.versao ?? "");
+    const section = String(block.section ?? block.secao ?? "");
+    const first = Number(block.from ?? block.de ?? 1);
+    const raw = block.answers ?? block.respostas;
+    if (Array.isArray(raw) && typeof raw[0] === "object") {
+      return { version, section, answers: raw as { number: number; label: string; annulled: boolean }[] };
+    }
+    const tokens = (Array.isArray(raw) ? (raw as string[]) : String(raw ?? "").split(/[\s,]+/)).filter(Boolean);
+    const answers = tokens.map((token, i) => {
+      const annulled = /^(anul|anulada|x|-)$/i.test(token);
+      return { number: first + i, label: annulled ? "" : token.trim().toUpperCase().slice(0, 1), annulled };
+    });
+    return { version, section, answers };
+  });
+  const empty = sections.find((s) => s.answers.length === 0);
+  if (empty) throw new DomainError("Há bloco de gabarito sem respostas.");
+  const kind = (raw as { kind?: string }).kind;
+  return { kind: kind === "PRELIMINAR" || kind === "DESCONHECIDO" ? kind : "DEFINITIVO", sections };
 }
 
 async function extractUntilPaused(paperIds: string[]) {
@@ -178,7 +227,8 @@ async function main() {
     case "continuar": {
       if (!requireAi()) return;
       // Also papers in review that still have unread questions (e.g. the official key showed more questions).
-      const papers = (await db.examPaper.findMany({ where: { status: { in: ["UPLOADED", "EXTRACTING", "FAILED", "REVIEW"] } }, orderBy: { createdAt: "asc" }, select: { id: true, status: true, extractedUpTo: true, expectedCount: true } })).filter(
+      const one = flag("prova");
+      const papers = (await db.examPaper.findMany({ where: { status: { in: ["UPLOADED", "EXTRACTING", "FAILED", "REVIEW"] }, ...(one ? { id: one } : {}) }, orderBy: { createdAt: "asc" }, select: { id: true, status: true, extractedUpTo: true, expectedCount: true } })).filter(
         (p) => p.status !== "REVIEW" || (p.expectedCount !== null && p.extractedUpTo < p.expectedCount),
       );
       if (papers.length === 0) console.log("Nenhuma extração pendente.");
@@ -229,6 +279,191 @@ Total publicado agora: ${total}. Revise as demais em /admin/provas.`);
         pages++;
       }
       console.log(`Removidas ${figures} figura(s) e ${pages} página(s) sem uso.`);
+      return;
+    }
+    case "resolver": {
+      if (!requireAi()) return;
+      const one = flag("prova");
+      // Provas já lidas cujos rascunhos ainda não têm resolução — o caso de uma transcrição manual.
+      const semResolucao = await db.questionDraft.groupBy({
+        by: ["examPaperId"],
+        where: { status: "PENDING", explanation: null, ...(one ? { examPaperId: one } : {}) },
+        _count: { _all: true },
+      });
+      const papers = await db.examPaper.findMany({
+        where: { id: { in: semResolucao.map((g) => g.examPaperId).filter((id): id is string => Boolean(id)) }, status: { in: ["REVIEW", "EXTRACTING"] } },
+        select: { id: true, title: true },
+      });
+      if (papers.length === 0) console.log("Nenhuma questão à espera de resolução.");
+      await extractUntilPaused(papers.map((p) => p.id));
+      return;
+    }
+    case "paginas": {
+      const [paperId, fromArg, toArg] = positional;
+      if (!paperId) throw new DomainError("Uso: npm run provas -- paginas <id da prova> [primeira] [última]");
+      const paper = await db.examPaper.findUniqueOrThrow({ where: { id: paperId }, select: { title: true, filePath: true } });
+      const total = await pdfPageCount(paper.filePath);
+      const from = Math.max(1, Number(fromArg ?? 1));
+      const to = Math.min(Number(toArg ?? total), total);
+      console.log(`${paper.title}: ${total} página(s). Gerando ${from} a ${to} em ${path.dirname(storagePath("paginas", pageImageName(paperId, from)))}`);
+      for (let page = from; page <= to; page++) {
+        await renderPage(paperId, paper.filePath, page);
+        console.log(`  página ${page}: ${pageImageName(paperId, page)}`);
+      }
+      return;
+    }
+    case "transcrever": {
+      const [paperId, file] = positional;
+      if (!paperId || !file) throw new DomainError('Uso: npm run provas -- transcrever <id da prova> questoes.json [--modelo="quem transcreveu"]');
+      const paper = await db.examPaper.findUniqueOrThrow({
+        where: { id: paperId },
+        select: { id: true, title: true, competitionId: true, filePath: true, version: true, layout: true, answerKey: true, extractedUpTo: true, expectedCount: true },
+      });
+      const questions = JSON.parse(await readFile(file, "utf8")) as TranscribedQuestion[];
+      const saved = await saveTranscribedQuestions(paper, questions, flag("modelo") ?? "transcrição manual");
+      const highest = Math.max(paper.extractedUpTo, ...questions.map((q) => q.number));
+      const complete = paper.expectedCount !== null && highest >= paper.expectedCount;
+      await db.examPaper.update({
+        where: { id: paper.id },
+        data: { extractedUpTo: highest, leaseUntil: null, ...(complete ? { status: "REVIEW", statusNote: null } : {}) },
+      });
+      console.log(`${paper.title}: ${saved} questão(ões) gravada(s); lidas até a ${highest}${complete ? " (prova completa, em revisão)" : ""}.`);
+      console.log("Rode `npm run provas -- publicar` para publicar as que passarem nas conferências.");
+      return;
+    }
+    case "disciplinas": {
+      const only = flag("prova");
+      const papers = await db.examPaper.findMany({
+        where: { ...(only ? { id: only } : {}), status: { in: ["REVIEW", "PUBLISHED"] } },
+        select: { id: true, title: true, competitionId: true, version: true, layout: true, answerKey: true, expectedCount: true },
+        orderBy: { title: "asc" },
+      });
+      let total = 0;
+      for (const paper of papers) {
+        const drafts = await db.questionDraft.findMany({ where: { examPaperId: paper.id, subjectId: null, status: "PENDING" }, select: { id: true, number: true } });
+        if (drafts.length === 0) continue;
+        const catalog = await loadCompetitionCatalog(paper.competitionId);
+        const { entries } = paperKey(paper);
+        const layout = (paper.layout as { subject: string; from: number; to: number }[] | null) ?? [];
+        let ok = 0;
+        const semNome = new Set<string>();
+        for (const d of drafts) {
+          // O bloco do gabarito diz a disciplina de cada número; o mapa da prova é o reserva.
+          const section =
+            entries?.find((e) => e.number === d.number)?.section ||
+            layout.find((s) => d.number !== null && d.number >= s.from && d.number <= s.to)?.subject;
+          const subjectId = section ? matchSubject(catalog, section, section) : null;
+          if (!subjectId) {
+            if (section) semNome.add(section);
+            continue;
+          }
+          await db.questionDraft.update({ where: { id: d.id }, data: { subjectId } });
+          ok++;
+        }
+        // O bloco do gabarito não resolve quando a banca junta disciplinas num bloco só
+        // ou nomeia o bloco pelo cargo: aí só o enunciado diz de que matéria é a questão.
+        let porConteudo = 0;
+        if (has("ia") && ok < drafts.length && requireAi()) {
+          console.log(`${paper.title}: lendo o enunciado das que sobraram…`);
+          porConteudo = await classifyDraftsByContent(paper.id, log);
+        }
+        if (ok || porConteudo) await recheckPaperDrafts(paper.id);
+        total += ok + porConteudo;
+        const falta = semNome.size && !porConteudo ? ` · sem disciplina no catálogo: ${[...semNome].join(", ")}` : "";
+        const ia = porConteudo ? ` (${porConteudo} pelo enunciado)` : "";
+        console.log(`${paper.title}: ${ok + porConteudo} de ${drafts.length} classificada(s)${ia}${falta}`);
+      }
+      console.log(`\nTotal classificado: ${total}.`);
+      return;
+    }
+    case "textos": {
+      if (!requireAi()) return;
+      const only = flag("prova");
+      const papers = await db.examPaper.findMany({
+        where: { ...(only ? { id: only } : {}), status: { in: ["REVIEW", "PUBLISHED"] } },
+        select: { id: true, title: true },
+        orderBy: { title: "asc" },
+      });
+      let total = 0;
+      for (const paper of papers) {
+        if (availableModels().length === 0) {
+          console.log("\nLimite diário da IA atingido em todos os modelos. Rode `npm run provas -- textos` amanhã.");
+          break;
+        }
+        const pendentes = (
+          await db.questionDraft.findMany({
+            where: { examPaperId: paper.id, origin: "EXTRACTED", status: { in: ["PENDING", "APPROVED"] } },
+            select: { statement: true },
+          })
+        ).filter((d) => missingBaseText(d.statement)).length;
+        if (pendentes === 0) continue;
+        console.log(`\n▶ ${paper.title}: ${pendentes} questão(ões) sem o texto-base`);
+        const filled = await fillMissingBaseTexts(paper.id, log);
+        await recheckPaperDrafts(paper.id);
+        total += filled;
+        console.log(`  ${filled} texto(s) recuperado(s).`);
+      }
+      console.log(`\nTotal recuperado: ${total}.`);
+      return;
+    }
+    case "gabarito": {
+      const [paperId, file] = positional;
+      if (!paperId || !file) throw new DomainError("Uso: npm run provas -- gabarito <id da prova> gabarito.json");
+      const paper = await db.examPaper.findUniqueOrThrow({ where: { id: paperId }, select: { id: true, title: true } });
+      const key = readManualKey(JSON.parse(await readFile(file, "utf8")));
+      await db.examPaper.update({ where: { id: paper.id }, data: { answerKey: key as unknown as Prisma.InputJsonValue, leaseUntil: null } });
+      const total = key.sections.reduce((n, s) => n + s.answers.length, 0);
+      console.log(`${paper.title}: gabarito gravado com ${total} resposta(s) em ${key.sections.length} bloco(s). Reaplicando nas questões…`);
+      const result = await refreshPaper(paper.id, (line) => console.log(`  ${line}`));
+      console.log(`  ${result.message}`);
+      return;
+    }
+    case "gerar": {
+      if (!requireAi()) return;
+      const only = flag("concurso");
+      const perRun = Math.max(1, Math.min(MAX_GENERATED_PER_RUN, Number(flag("quantidade") ?? 3)));
+      const rounds = Math.max(1, Number(flag("rodadas") ?? 1));
+
+      // Só é possível gerar no estilo de uma prova que já tem questões oficiais publicadas na disciplina.
+      const groups = await db.question.groupBy({
+        by: ["competitionId", "subjectId"],
+        where: { source: "OFFICIAL", ownerId: null, competitionId: only ? await competitionId(only) : { not: null } },
+        _count: { _all: true },
+      });
+      if (groups.length === 0) throw new DomainError("Nenhuma questão oficial publicada ainda. Rode `npm run provas -- publicar` antes de gerar.");
+
+      const names = new Map(
+        (await db.competition.findMany({ select: { id: true, name: true } })).map((c) => [c.id, c.name] as const),
+      );
+      const subjects = new Map((await db.subject.findMany({ select: { id: true, name: true } })).map((s) => [s.id, s.name] as const));
+
+      let created = 0;
+      for (const group of groups) {
+        const competition = group.competitionId;
+        if (!competition) continue;
+        const label = `${names.get(competition) ?? competition} · ${subjects.get(group.subjectId) ?? group.subjectId}`;
+        for (let round = 0; round < rounds; round++) {
+          if (availableModels().length === 0) {
+            console.log("\nLimite diário da IA atingido em todos os modelos. Rode `npm run provas -- gerar` amanhã.");
+            round = rounds;
+            break;
+          }
+          try {
+            const result = await generateStyleQuestions({ competitionId: competition, subjectId: group.subjectId, topicId: null, count: perRun, difficulty: null });
+            created += result.created;
+            console.log(`✓ ${label}: ${result.created} rascunho(s) gerado(s) (${group._count._all} oficiais como referência)`);
+          } catch (err) {
+            console.log(`⚠ ${label}: ${err instanceof Error ? err.message : String(err)}`);
+            break;
+          }
+        }
+      }
+
+      console.log(`\nTotal gerado: ${created} rascunho(s). Revise em /admin/geradas.`);
+      if (has("publicar")) {
+        const { published, failed } = await approveCleanDrafts({ origin: "GENERATED" });
+        console.log(`Publicadas sem pendências: ${published}${failed.length ? `, ${failed.length} com erro: ${failed[0]}` : ""}.`);
+      }
       return;
     }
     case "situacao":

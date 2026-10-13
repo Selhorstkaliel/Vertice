@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as LabelPrimitive from "@radix-ui/react-label";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const fieldBase = [
@@ -31,20 +32,19 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
 );
 Textarea.displayName = "Textarea";
 
+/**
+ * A seta é um ícone comum, sobreposto ao campo. A versão anterior usava uma imagem embutida
+ * numa classe utilitária: os espaços do SVG quebravam a classe em pedaços, o campo acabava
+ * sem cor de fundo e, como o navegador desenha a lista com a cor do campo, as opções sumiam.
+ */
 export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, children, ...props }, ref) => (
-    <select
-      ref={ref}
-      className={cn(
-        fieldBase,
-        "h-10 appearance-none bg-[length:16px] bg-[right_10px_center] bg-no-repeat pr-9 pl-3 text-base",
-        "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237d8592' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")]",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </select>
+    <span className="relative block w-full">
+      <select ref={ref} className={cn(fieldBase, "h-10 appearance-none pr-9 pl-3 text-base", className)} {...props}>
+        {children}
+      </select>
+      <ChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-fg-subtle" />
+    </span>
   ),
 );
 NativeSelect.displayName = "NativeSelect";

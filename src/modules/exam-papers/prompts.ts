@@ -23,10 +23,11 @@ const OPTIONS = { type: "ARRAY", items: { type: "OBJECT", properties: { label: S
 export const EXTRACTION_SYSTEM = `Você transcreve provas oficiais de concursos brasileiros para um banco de questões.
 Regras:
 - Transcreva fielmente o texto impresso: não resuma, não corrija o conteúdo, não resolva e não invente nada. Corrija apenas falhas evidentes de digitalização (letras trocadas por ruído do scanner).
-- Inclua no enunciado os textos-base, tabelas em texto e comandos que a questão usa. Se vários itens compartilham um texto-base, repita-o em cada questão.
+- Inclua no enunciado os textos-base, tabelas em texto e comandos que a questão usa. Se vários itens compartilham um texto-base, repita-o inteiro em cada um deles, mesmo que ele esteja em outra página do arquivo e mesmo que fique repetitivo: a questão será lida sozinha, e um enunciado como "de acordo com o texto I, pode-se inferir que" sem o texto não pode ser respondido. Transcreva o texto-base com título, subtítulo, parágrafos, destaques em maiúsculas e a linha de fonte, como estão impressos.
 - Fórmulas, símbolos e unidades matemáticas em LaTeX entre $...$ (ou $$...$$ para destaque). Dinheiro fica como texto: R$ 150,00.
 - Figuras, gráficos, diagramas, mapas e tabelas desenhadas: coloque [[FIGURA n]] na posição exata onde aparecem (n começa em 1 em cada questão) e descreva-as em figures, na mesma ordem, com page = posição da página no arquivo PDF (1 = primeira página do arquivo, não o número impresso) e box_2d = [ymin, xmin, ymax, xmax] de 0 a 1000 cobrindo só a figura. Se a alternativa é uma figura, use o marcador no texto da alternativa.
 - Letras das alternativas sem parênteses: A, B, C, D, E.
+- Provas de julgamento de itens (certo ou errado, como as do Cebraspe): o enunciado é o item a julgar, incluindo o texto ou a situação-problema a que ele se refere, e as alternativas são exatamente duas: C com o texto "Certo" e E com o texto "Errado".
 - Classifique cada questão usando apenas os códigos do catálogo informado; se nenhum tópico servir, deixe topic vazio.
 - difficulty é uma estimativa: EASY, MEDIUM ou HARD.`;
 
@@ -103,6 +104,7 @@ export const ANSWER_KEY_PROMPT = `Este PDF é o gabarito oficial de um concurso.
 - Um bloco por combinação de versão da prova (cor, tipo ou código; vazio se só existe uma) e disciplina ou parte (como impresso).
 - Para cada questão: number e label com a letra final. Se o gabarito diz "Alterada de E para D", label = "D".
 - Questão anulada: annulled = true e label vazio.
+- Alguns gabaritos não escrevem a letra: imprimem as cinco alternativas e preenchem de preto o círculo da correta. Nesses, a resposta é a letra do círculo preenchido (o único escuro da linha), não a primeira da linha. Confira linha a linha.
 - Não deduza respostas que não estão impressas.`;
 
 export const ANSWER_KEY_SCHEMA = {
@@ -124,6 +126,54 @@ export const ANSWER_KEY_SCHEMA = {
   },
   required: ["kind", "sections"],
 };
+
+export const CLASSIFY_SYSTEM = `Você classifica questões de concurso dentro do catálogo de disciplinas e tópicos de um concurso específico.
+Use apenas os códigos informados. Escolha pelo conteúdo cobrado na questão, não pelo assunto do texto de apoio: uma questão de interpretação sobre um texto de biologia é de Língua Portuguesa.
+Quando nenhum tópico servir, devolva topic vazio.`;
+
+export function classifyPrompt(params: { catalog: string; items: { number: number; statement: string }[] }) {
+  return `Catálogo de disciplinas (slug) e tópicos (código):
+${params.catalog}
+
+Para cada questão devolva number (o mesmo recebido) e topic (o código do tópico mais específico que couber).
+
+${params.items.map((q) => `### Questão ${q.number}\n${q.statement.slice(0, 1200)}`).join("\n\n")}`;
+}
+
+export const CLASSIFY_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    questions: { type: "ARRAY", items: { type: "OBJECT", properties: { number: INTEGER, topic: STRING }, required: ["number", "topic"] } },
+  },
+  required: ["questions"],
+};
+
+export interface ClassifyOutput {
+  questions: { number: number; topic: string }[];
+}
+
+export const BASE_TEXT_SYSTEM = `Você recupera textos-base de provas oficiais brasileiras que ficaram de fora da transcrição.
+Transcreva fielmente o que está impresso: não resuma, não traduza, não corrija e não invente. Mantenha título, subtítulo, parágrafos, destaques em maiúsculas e a linha de fonte (autor, obra, endereço e data de acesso).
+Fórmulas e símbolos matemáticos em LaTeX entre $...$. Se a questão não depende de nenhum texto-base impresso, devolve baseText vazio.`;
+
+export function baseTextPrompt(items: { number: number; statement: string }[]) {
+  return `Cada questão abaixo foi transcrita deste PDF sem o texto-base a que ela se refere (texto I, texto CB1A1, a tirinha, o parágrafo citado, o poema, o excerto). Localize na prova o texto-base de cada uma e transcreva-o inteiro.
+Devolva number (o mesmo número recebido) e baseText (só o texto-base, sem o comando da questão nem as alternativas).
+
+${items.map((q) => `### Questão ${q.number}\n${q.statement}`).join("\n\n")}`;
+}
+
+export const BASE_TEXT_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    texts: { type: "ARRAY", items: { type: "OBJECT", properties: { number: INTEGER, baseText: STRING }, required: ["number", "baseText"] } },
+  },
+  required: ["texts"],
+};
+
+export interface BaseTextOutput {
+  texts: { number: number; baseText: string }[];
+}
 
 export const SOLVE_SYSTEM = `Você é professor de cursinho preparatório para concursos militares. Resolve questões objetivas com rigor, em português do Brasil, passo a passo e sem pular contas.
 Use LaTeX entre $...$ para fórmulas. Não cite fontes externas.`;

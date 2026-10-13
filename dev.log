@@ -1,0 +1,931 @@
+
+> vertice@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.25
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.49:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     · optimizePackageImports
+
+ ✓ Starting...
+ ✓ Ready in 10s
+ ✓ Compiled /middleware in 406ms (116 modules)
+ ○ Compiling /admin/provas ...
+ ✓ Compiled /admin/provas in 5.3s (2824 modules)
+ GET /admin/provas 200 in 8666ms
+ ○ Compiling /api/admin/provas ...
+ ✓ Compiled /api/admin/provas in 6.5s (2850 modules)
+ POST /api/admin/provas 400 in 8049ms
+ ✓ Compiled in 1728ms (943 modules)
+ GET /admin/provas 200 in 976ms
+ GET /admin/provas 200 in 403ms
+ ○ Compiling /admin/provas/[id] ...
+ ✓ Compiled /admin/provas/[id] in 1866ms (2878 modules)
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 4929ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1100ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 2380ms
+ ○ Compiling /api/figuras/[file] ...
+ ✓ Compiled /api/figuras/[file] in 1625ms (2871 modules)
+ GET /api/figuras/cmu2oqe7q000dbtbklyvageu2-q38-f1-bd3dd719.png 200 in 2950ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 201ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1654ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 303ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1225ms
+ GET /api/figuras/cmu2oqe7q000dbtbklyvageu2-q29-f1-27097ed8.png 200 in 70ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 255ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 159ms
+ GET /api/figuras/cmu2oqe7q000dbtbklyvageu2-q25-f1-e09d6d9c.png 200 in 72ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1418ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 940ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 203ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1169ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 269ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 176ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1397ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 888ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 272ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1033ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 253ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 914ms
+ GET /api/figuras/cmu2oqe7q000dbtbklyvageu2-q15-f1-b5484a9d.png 200 in 156ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 145ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 949ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 267ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 143ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 349ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 823ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 250ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 152ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 245ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 895ms
+ GET /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 358ms
+ POST /admin/provas/cmu2oqe7q000dbtbklyvageu2 200 in 1269ms
+ GET /admin/provas 200 in 2627ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 345ms
+ ○ Compiling /api/admin/provas/[id]/paginas/[page] ...
+ ✓ Compiled /api/admin/provas/[id]/paginas/[page] in 1831ms (2871 modules)
+ GET /api/admin/provas/cmu2oqfxg000fbtbkwj1wmcxh/paginas/19 200 in 3440ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 234ms
+ ○ Compiling /api/figuras/[file] ...
+ ✓ Compiled /api/figuras/[file] in 682ms (1927 modules)
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 2520ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-dj4wzt8wsv2-f1-c765c418.png 200 in 928ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 685ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 1030ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 496ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 170ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-dj48ea3udk3-f1-7f2f2457.png 200 in 85ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 286ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 165ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 365ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 182ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 329ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 929ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 345ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 155ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 300ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 214ms
+ GET /api/admin/provas/cmu2oqfxg000fbtbkwj1wmcxh/paginas/17 200 in 104ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 169ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-dj45jbibfq7-f1-d3b44120.png 200 in 84ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 1170ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 269ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 146ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 244ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 174ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-q21-f1-033829f9.png 200 in 91ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 291ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 683ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-q16-f1-ef404cc6.png 200 in 79ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 211ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 734ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 239ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 141ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-q9-f1-cc90565c.png 200 in 62ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 250ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 881ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-q1-f1-4dce5cf7.png 200 in 69ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 253ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 147ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 161ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 887ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 223ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 139ms
+ GET /api/figuras/cmu2oqfxg000fbtbkwj1wmcxh-q6-f1-748ef601.png 200 in 65ms
+ POST /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 241ms
+ GET /admin/provas/cmu2oqfxg000fbtbkwj1wmcxh 200 in 163ms
+ GET /admin/provas 200 in 318ms
+ ○ Compiling /admin/geradas ...
+ ✓ Compiled /admin/geradas in 3.3s (2884 modules)
+ GET /admin/geradas 200 in 4377ms
+ GET /admin/geradas 200 in 308ms
+ GET /admin/geradas 200 in 223ms
+ GET /admin/provas 200 in 333ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 397ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 2048ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1037ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1554ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 864ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q34-f2-40db0719.png 200 in 164ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q34-f3-748f934f.png 200 in 166ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q34-f1-174e17ce.png 200 in 170ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q34-f4-3f459fad.png 200 in 172ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q34-f5-28f55b16.png 200 in 175ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 154ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1037ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q29-f1-da889bf8.png 200 in 61ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1673ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1161ms
+ GET /api/figuras/cmu2qvf67000dbtxoj4usqhx6-q21-f1-46ed01f5.png 200 in 88ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1316ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 860ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 341ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1191ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1490ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 912ms
+ POST /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 1345ms
+ GET /admin/provas/cmu2qvf67000dbtxoj4usqhx6 200 in 865ms
+ GET /admin/provas 200 in 219ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 149ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 275ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 747ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 251ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 619ms
+ GET /api/figuras/cmu2qvgvw000fbtxo0xfdxmw8-q31-f1-4c8d8f54.png 200 in 58ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 1252ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 683ms
+ GET /api/figuras/cmu2qvgvw000fbtxo0xfdxmw8-q29-f1-16887e3a.png 200 in 64ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 275ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 836ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 153ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 785ms
+ GET /api/figuras/cmu2qvgvw000fbtxo0xfdxmw8-q23-f1-a4c4a5a9.png 200 in 76ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 189ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 893ms
+ POST /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 393ms
+ GET /admin/provas/cmu2qvgvw000fbtxo0xfdxmw8 200 in 656ms
+ GET /admin/provas 200 in 231ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 218ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q18-f1-d3ae64a6.png 200 in 97ms
+ POST /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 272ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 159ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 175ms
+ POST /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 602ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q14-f1-c5e760e5.png 200 in 66ms
+ POST /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 383ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 297ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q10-f1-21f9f777.png 200 in 78ms
+ POST /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 243ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 159ms
+ POST /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 674ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 406ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q4-f1-e09dd5eb.png 200 in 117ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q4-f2-9cfa22c2.png 200 in 119ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q4-f4-0a5d1f05.png 200 in 122ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q4-f3-ed884b82.png 200 in 124ms
+ GET /api/figuras/cmu2oqa7e0007btbkwb2b27k9-q4-f5-f34ce407.png 200 in 126ms
+ POST /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 245ms
+ GET /admin/provas/cmu2oqa7e0007btbkwb2b27k9 200 in 160ms
+ GET /admin/provas 200 in 212ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 149ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 249ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 780ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 178ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 876ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 265ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 157ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 261ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 159ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 266ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 911ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 260ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 155ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q19-f1-e19cbecf.png 200 in 88ms
+ ○ Compiling /api/admin/provas/[id]/paginas/[page] ...
+ ✓ Compiled /api/admin/provas/[id]/paginas/[page] in 825ms (1936 modules)
+ GET /api/admin/provas/cmu2oqa870009btbk9e98nynr/paginas/9 200 in 1079ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1875ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 801ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkxoeqwirm-f1-d5f850b0.png 200 in 83ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1090ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 626ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkxoeqwirm-f2-c7d0e10e.png 200 in 74ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 282ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 969ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q12-f1-b64ccac4.png 200 in 66ms
+ GET /api/admin/provas/cmu2oqa870009btbk9e98nynr/paginas/6 200 in 100ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 299ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 183ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbk1yjutmd8-f1-258a6900.png 200 in 73ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 348ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbk1yjutmd8-f2-bbb248a0.png 200 in 59ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1107ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 288ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 159ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q10-f1-af8502d4.png 200 in 75ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 228ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 142ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q9-f1-beb0871b.png 200 in 77ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1024ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 615ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q8-f1-fdd2d052.png 200 in 144ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q8-f3-e323aa34.png 200 in 122ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q8-f2-e8ad7203.png 200 in 124ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q8-f4-d49c8cdd.png 200 in 126ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q8-f5-8e40c627.png 200 in 128ms
+ GET /api/admin/provas/cmu2oqa870009btbk9e98nynr/paginas/5 200 in 157ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 373ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 151ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkil4k65gq-f1-34bfc211.png 200 in 75ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1270ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 870ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q4-f1-9294bbeb.png 200 in 125ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q4-f4-62739411.png 200 in 127ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q4-f2-5ee0e8f7.png 200 in 130ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q4-f3-dd272564.png 200 in 132ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q4-f6-d289f81d.png 200 in 133ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q4-f5-5b090373.png 200 in 136ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 109ms
+ GET /api/admin/provas/cmu2oqa870009btbk9e98nynr/paginas/3 200 in 84ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1686ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1319ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkar65enlq-f2-52d3e7bd.png 200 in 79ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 260ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 242ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkar65enlq-f3-ceadd7ff.png 200 in 71ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1281ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 932ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkar65enlq-f4-738b9764.png 200 in 74ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1202ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 661ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkar65enlq-f5-789635a0.png 200 in 81ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 151ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-dbkar65enlq-f6-f670dff0.png 200 in 78ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 920ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 1254ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 606ms
+ GET /api/figuras/cmu2oqa870009btbk9e98nynr-q2-f1-6202413f.png 200 in 88ms
+ POST /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 247ms
+ GET /admin/provas/cmu2oqa870009btbk9e98nynr 200 in 136ms
+ GET /admin/provas 200 in 418ms
+ GET /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 168ms
+ POST /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 268ms
+ GET /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 421ms
+ GET /api/figuras/cmu2qvcbz0009btxoebayw1bq-q15-f3-c0f3808a.png 200 in 130ms
+ GET /api/figuras/cmu2qvcbz0009btxoebayw1bq-q15-f1-7430d1e7.png 200 in 133ms
+ GET /api/figuras/cmu2qvcbz0009btxoebayw1bq-q15-f2-1f074c13.png 200 in 136ms
+ GET /api/figuras/cmu2qvcbz0009btxoebayw1bq-q15-f4-6838d9b8.png 200 in 139ms
+ GET /api/figuras/cmu2qvcbz0009btxoebayw1bq-q15-f5-ef716690.png 200 in 142ms
+ GET /api/admin/provas/cmu2qvcbz0009btxoebayw1bq/paginas/5 200 in 93ms
+ POST /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 954ms
+ GET /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 675ms
+ GET /api/figuras/cmu2qvcbz0009btxoebayw1bq-dxoljn485kr-f5-077f17cc.png 200 in 82ms
+ POST /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 237ms
+ GET /admin/provas/cmu2qvcbz0009btxoebayw1bq 200 in 134ms
+ GET /admin/provas 200 in 209ms
+ GET /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 137ms
+ POST /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 245ms
+ GET /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 170ms
+ POST /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 261ms
+ GET /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 169ms
+ POST /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 259ms
+ GET /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 824ms
+ GET /api/figuras/cmu2qvcd4000bbtxofyqp2u1f-q22-f1-7ea1ce15.png 200 in 84ms
+ POST /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 234ms
+ GET /admin/provas/cmu2qvcd4000bbtxofyqp2u1f 200 in 137ms
+ GET /admin/provas 200 in 261ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 340ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q38-f1-0279dad0.png 200 in 80ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 289ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 165ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q33-f1-0827cece.png 200 in 58ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 254ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 177ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q29-f1-d05f4366.png 200 in 125ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 343ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 165ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q28-f1-9892fc11.png 200 in 71ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 435ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 1737ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q25-f1-641a7a73.png 200 in 90ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 1324ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 895ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q23-f1-9d3263a5.png 200 in 85ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 262ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 148ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q17-f1-c963e92d.png 200 in 90ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q17-f2-9043f554.png 200 in 95ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 169ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 950ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q16-f1-10a951b2.png 200 in 79ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 242ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 1572ms
+ GET /api/figuras/cmu2oqk0d000hbtbkbjz077c5-q14-f1-2ab8af81.png 200 in 60ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 223ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 1015ms
+ GET /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 165ms
+ POST /admin/provas/cmu2oqk0d000hbtbkbjz077c5 200 in 868ms
+ GET /admin/provas 200 in 237ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1584ms
+ GET /api/figuras/cmu2qvk38000hbtxo9r2b4e3m-q39-f1-054e4adc.png 200 in 68ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 2333ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1625ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 580ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 875ms
+ GET /api/figuras/cmu2qvk38000hbtxo9r2b4e3m-q27-f1-287d2a2a.png 200 in 72ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1971ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1299ms
+ GET /api/figuras/cmu2qvk38000hbtxo9r2b4e3m-q23-f1-e48afbcd.png 200 in 64ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 138ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1670ms
+ GET /api/figuras/cmu2qvk38000hbtxo9r2b4e3m-q22-f1-41b7e601.png 200 in 74ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 2148ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1414ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 352ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1816ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 2049ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1372ms
+ GET /api/figuras/cmu2qvk38000hbtxo9r2b4e3m-q17-f1-8845ae3b.png 200 in 106ms
+ POST /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 2630ms
+ GET /admin/provas/cmu2qvk38000hbtxo9r2b4e3m 200 in 1313ms
+ GET /admin/provas 200 in 320ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 182ms
+ GET /api/admin/provas/cmu4c0rws0001btdwmkr1wzkx/paginas/3 200 in 108ms
+ POST /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 332ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 150ms
+ GET /api/figuras/cmu4c0rws0001btdwmkr1wzkx-ddw6usgu2ql-f1-603ffbfc.png 200 in 75ms
+ POST /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 223ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 151ms
+ GET /api/admin/provas/cmu4c0rws0001btdwmkr1wzkx/paginas/1 200 in 128ms
+ POST /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 242ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 222ms
+ POST /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 507ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 368ms
+ GET /api/figuras/cmu4c0rws0001btdwmkr1wzkx-ddwbhaiyadi-f1-9888fd99.png 200 in 90ms
+ POST /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 266ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 146ms
+ POST /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 365ms
+ GET /admin/provas/cmu4c0rws0001btdwmkr1wzkx 200 in 152ms
+ GET /admin/provas 200 in 205ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 144ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 276ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 147ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 371ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 222ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 235ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 191ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 267ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 154ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 669ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 148ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 214ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 130ms
+ POST /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 297ms
+ GET /admin/provas/cmu4ceo6o0001bt08kn8nav32 200 in 183ms
+ GET /admin/provas 200 in 175ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 9457ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/10 200 in 335ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14903ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14654ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 12691ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 9044ms
+ GET /api/figuras/cmu2ndbcd0003btyclpuzehof-dycm2585xrz-f1-55817c77.png 200 in 105ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 12685ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 12572ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/9 200 in 138ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 15261ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 15170ms
+ GET /api/figuras/cmu2ndbcd0003btyclpuzehof-dyc968480pd-f1-b412deed.png 200 in 161ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/8 200 in 156ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 23815ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 19188ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14655ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 19979ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 13570ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 9540ms
+ GET /api/figuras/cmu2ndbcd0003btyclpuzehof-dycsg8gak5x-f1-4126d47d.png 200 in 106ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 5704ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 21734ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 9307ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 22092ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 11259ms
+ ○ Compiling /icon.svg ...
+ ✓ Compiled /icon.svg in 962ms (1938 modules)
+ GET /icon.svg?9bca8d231d3f88e7 200 in 1422ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/1 200 in 653ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/2 200 in 106ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/3 200 in 65ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/4 200 in 64ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/5 200 in 63ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/6 200 in 48ms
+ GET /api/admin/provas/cmu2ndbcd0003btyclpuzehof/paginas/7 200 in 73ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 15535ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14554ms
+ GET /api/figuras/cmu2ndbcd0003btyclpuzehof-dyc4xud4peq-f1-bc9dec45.png 200 in 270ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14270ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14042ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 13582ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 13146ms
+ GET /api/figuras/cmu2ndbcd0003btyclpuzehof-dycm0ljrdlb-f1-b598756c.png 200 in 150ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 4819ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 10041ms
+ ○ Compiling /mentor ...
+ ✓ Compiled /entrar in 18.1s (3826 modules)
+ GET /entrar 200 in 4335ms
+ GET /mentor 200 in 24641ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 30472ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 30883ms
+ ○ Compiling /api/mentor ...
+ ✓ Compiled /api/mentor in 2s (3829 modules)
+ POST /api/mentor 200 in 8322ms
+ GET /mentor 200 in 362ms
+ ○ Compiling /painel ...
+ ✓ Compiled /painel in 2.5s (3871 modules)
+ GET /painel 200 in 3697ms
+ ○ Compiling /concursos ...
+ ✓ Compiled /concursos in 2.5s (3897 modules)
+ GET /concursos 200 in 3240ms
+ ○ Compiling /edital ...
+ ✓ Compiled /edital in 2.6s (3907 modules)
+ GET /edital?concurso=cmu0ar8av00fkbtm8ptqsz00w 200 in 3110ms
+ GET /edital?concurso=cmu0ar8av00fkbtm8ptqsz00w&filtro=NOT_STUDIED 200 in 166ms
+ GET /edital?concurso=cmu0ar8av00fkbtm8ptqsz00w 200 in 122ms
+ GET /edital 200 in 144ms
+ GET /concursos 200 in 261ms
+ ○ Compiling /concursos/[id] ...
+ ✓ Compiled /concursos/[id] in 2.4s (3899 modules)
+ GET /concursos/cmu0ar8av00fkbtm8ptqsz00w 200 in 8926ms
+ GET /concursos/cmu0ar8av00fkbtm8ptqsz00w 200 in 835ms
+ ○ Compiling /plano ...
+ ✓ Compiled /plano in 3.7s (3848 modules)
+ GET /plano 200 in 5136ms
+ ○ Compiling /rotina ...
+ ✓ Compiled /rotina in 3.4s (3553 modules)
+ GET /rotina 200 in 4066ms
+ ○ Compiling /questoes ...
+ ✓ Compiled /questoes in 7.2s (3561 modules)
+ GET /questoes 200 in 8182ms
+ ○ Compiling /flashcards ...
+ ✓ Compiled /flashcards in 3.1s (3571 modules)
+ GET /flashcards 200 in 3863ms
+ ○ Compiling /caderno-de-erros ...
+ ✓ Compiled /caderno-de-erros in 5.3s (3577 modules)
+ GET /caderno-de-erros 200 in 5764ms
+ ○ Compiling /simulados ...
+ ✓ Compiled /simulados in 1369ms (3584 modules)
+ GET /simulados 200 in 1739ms
+ ○ Compiling /desempenho ...
+ ✓ Compiled /desempenho in 10s (4617 modules)
+ GET /desempenho 200 in 18003ms
+ ○ Compiling /metas ...
+ ✓ Compiled /metas in 6.6s (4608 modules)
+ GET /metas 200 in 7525ms
+ ○ Compiling /calendario ...
+ ✓ Compiled /calendario in 2.9s (4612 modules)
+ GET /calendario 200 in 3780ms
+ GET /calendario?visao=mes&data=2026-10-01 200 in 401ms
+ GET /calendario?visao=mes&data=2026-09-01 200 in 821ms
+ ○ Compiling /militar ...
+ ✓ Compiled /militar in 4.2s (4634 modules)
+ GET /militar 200 in 4860ms
+ GET /militar?aba=taf 200 in 112ms
+ ○ Compiling /admin/provas ...
+ ✓ Compiled /admin/provas in 3.2s (3086 modules)
+ GET /admin/provas 200 in 4355ms
+ ○ Compiling /configuracoes ...
+ ✓ Compiled /configuracoes in 3.3s (4672 modules)
+ GET /configuracoes 200 in 4103ms
+ ○ Compiling /entrar ...
+ ✓ Compiled /entrar in 7.1s (3078 modules)
+ GET /entrar 307 in 3603ms
+ ○ Compiling /painel ...
+ ✓ Compiled /painel in 3.9s (3121 modules)
+ GET /painel 200 in 5735ms
+ GET /entrar 307 in 291ms
+ GET /painel 200 in 512ms
+ GET /admin/provas 200 in 516ms
+ ○ Compiling /admin/provas/[id] ...
+ ✓ Compiled /admin/provas/[id] in 5.8s (3127 modules)
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 20074ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 9328ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 14901ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 17990ms
+ ○ Compiling /api/figuras/[file] ...
+ ✓ Compiled /api/figuras/[file] in 4.9s (3105 modules)
+ GET /api/figuras/cmu2ndbcd0003btyclpuzehof-dyc3zk68ruc-f1-6861b8a3.png 200 in 5950ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 29392ms
+ POST /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 25339ms
+ GET /admin/provas/cmu2ndbcd0003btyclpuzehof 200 in 24427ms
+ GET /admin/provas 200 in 572ms
+ GET /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 689ms
+ POST /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 588ms
+ GET /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 283ms
+ POST /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 671ms
+ GET /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 261ms
+ GET /api/figuras/cmu2qvlad000jbtxol1u3mwt3-q22-f1-e2ea234b.png 200 in 233ms
+ GET /api/figuras/cmu2qvlad000jbtxol1u3mwt3-q21-f1-6bd9b63f.png 200 in 376ms
+ GET /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 514ms
+ POST /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 3835ms
+ ○ Compiling /api/admin/provas/[id]/paginas/[page] ...
+ ✓ Compiled /api/admin/provas/[id]/paginas/[page] in 6s (3107 modules)
+ GET /api/admin/provas/cmu2qvlad000jbtxol1u3mwt3/paginas/8 200 in 6495ms
+ POST /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 1207ms
+ GET /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 1958ms
+ GET /api/figuras/cmu2qvlad000jbtxol1u3mwt3-dmwbcjc8451-f1-b1d96744.png 200 in 115ms
+ POST /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 304ms
+ GET /admin/provas/cmu2qvlad000jbtxol1u3mwt3 200 in 1160ms
+ GET /admin/provas 200 in 461ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 931ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 480ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 218ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 440ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 235ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 632ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 241ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 390ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 229ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 457ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 220ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 491ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 227ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 441ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 206ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 4674ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 810ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 705ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 266ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 539ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 224ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 391ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 197ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 333ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 181ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 462ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 215ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 389ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 223ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 202ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 872ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 280ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 173ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 107ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 102ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 424ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 204ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 474ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 402ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 419ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 185ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 4904ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 2544ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 485ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 289ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 362ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 216ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 193ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 570ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 319ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 186ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 534ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 200ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 303ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 216ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 288ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 189ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 334ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 185ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 173ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 552ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 575ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 192ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 305ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 218ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 301ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 217ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 299ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 712ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 276ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 164ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 278ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 408ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 170ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 486ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 294ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 192ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 182ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 494ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 299ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 184ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 202ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 541ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 245ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 336ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 255ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 325ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 754ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 391ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 283ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 306ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 244ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 159ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 255ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 193ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 243ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 219ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 283ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 218ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 301ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 322ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 1037ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 346ms
+ POST /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 367ms
+ GET /admin/provas/cmu484pfj000bbt8ox6f6y43m 200 in 175ms
+ GET /admin/provas 200 in 248ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 318ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 9033ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 4689ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1189ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 576ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 195ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 765ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 930ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 578ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 756ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1334ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 411ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 595ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 428ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 197ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 424ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 189ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 911ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 549ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 904ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 576ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1024ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 614ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 454ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 593ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 939ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 623ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 423ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 185ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1435ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1291ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 349ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 164ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 191ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 724ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 349ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 193ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 893ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 565ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 178ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 741ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 301ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 170ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1266ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 635ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 922ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 588ms
+ GET /api/admin/provas/cmu4baruv0001btl4fo3s1i3y/paginas/8 200 in 154ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 200ms
+ GET /api/figuras/cmu4baruv0001btl4fo3s1i3y-dl4jnrxf5fp-f1-232c963e.png 200 in 97ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1916ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 355ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 258ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 182ms
+ GET /api/figuras/cmu4baruv0001btl4fo3s1i3y-dl4z2dfrzm0-f1-d2a185b8.png 200 in 116ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1001ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1203ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 605ms
+ GET /api/figuras/cmu4baruv0001btl4fo3s1i3y-q48-f1-b7650941.png 200 in 95ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 173ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 967ms
+ GET /api/figuras/cmu4baruv0001btl4fo3s1i3y-q47-f1-2d94a178.png 200 in 78ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1421ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1009ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 244ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1104ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1105ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 622ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 947ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 554ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1233ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 835ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 186ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 757ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 858ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 555ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 172ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 705ms
+ GET /api/figuras/cmu4baruv0001btl4fo3s1i3y-q46-f1-0edb8e96.png 200 in 92ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 4165ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 3839ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 659ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 226ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1457ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 793ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1342ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 917ms
+ POST /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 1059ms
+ GET /admin/provas/cmu4baruv0001btl4fo3s1i3y 200 in 591ms
+ GET /admin/provas 200 in 232ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 210ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 157ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 111ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 95ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 468ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 210ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 9165ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 6103ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 713ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 278ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 2420ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1346ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 504ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 219ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 551ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 249ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 488ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 267ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 5022ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 2686ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 108ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 156ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1762ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1128ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 201ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1397ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 167ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1679ms
+ GET /admin/provas 200 in 244ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 165ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 489ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 203ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 356ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 199ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 519ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 185ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 321ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 179ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 260ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 172ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 310ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 178ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 297ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 168ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 484ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 220ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 265ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 175ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 807ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 161ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 288ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 199ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 436ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 290ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 454ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 288ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 440ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 231ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 500ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 202ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 448ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 334ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 521ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 256ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 321ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 204ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 320ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 189ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 416ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 209ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 481ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 462ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 3196ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 427ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 326ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 206ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 398ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 349ms
+ POST /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 269ms
+ GET /admin/provas/cmu4bmqa70001btaogcxjwety 200 in 149ms
+ GET /admin/provas 200 in 243ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 217ms
+ GET /api/figuras/cmu484ocp0005bt8ot4hczyvl-q70-f1-c1d17e30.png 200 in 194ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1983ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1205ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 363ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 184ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 2561ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 2069ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1790ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1096ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 199ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1242ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 178ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1323ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 374ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 965ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 287ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 816ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1843ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1180ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1865ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1331ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 4005ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 3819ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1168ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 304ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 446ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 267ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 662ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 705ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 83566ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 88791ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 84783ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 64717ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1091ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 4531ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 309ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 428ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 6249ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 665ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 357ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 238ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 693ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 6816ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1025ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1980ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 479ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 201ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 169ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1323ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 2002ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1542ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 2751ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 2414ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 2224ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1093ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1656ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1141ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 315ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 1025ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 3779ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 3260ms
+ POST /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 448ms
+ GET /admin/provas/cmu484ocp0005bt8ot4hczyvl 200 in 245ms
+ GET /admin/provas 200 in 340ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1074ms
+ ✓ Compiled in 21.4s (4700 modules)
+ ○ Compiling /entrar ...
+ ✓ Compiled /entrar in 1078ms (3111 modules)
+ GET /entrar 200 in 2508ms
+ ○ Compiling / ...
+ ✓ Compiled / in 42.2s (4688 modules)
+ GET / 307 in 48017ms
+ GET /painel 200 in 2629ms
+ GET /admin/provas 200 in 4271ms
+ GET /admin/provas 200 in 240ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 490ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 925ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 266ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 5332ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 546ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 76454ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 42777ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 24291ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 29160ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 27871ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 17206ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 15682ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 30259ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1498ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 2187ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 18765ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 10376ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 6331ms
+ POST /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 10364ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 743ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 1402ms
+ GET /admin/provas/cmu484o5l0003bt8o8laixm7f 200 in 5452ms
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Db, cause: Some(DbError { severity: "FATAL", parsed_severity: Some(Fatal), code: SqlState(E57P01), message: "terminating connection due to administrator command", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("postgres.c"), line: Some(3286), routine: Some("ProcessInterrupts") }) }

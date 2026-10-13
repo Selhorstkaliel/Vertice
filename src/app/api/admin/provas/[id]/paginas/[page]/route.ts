@@ -14,7 +14,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const png = await renderPage(paper.id, paper.filePath, number);
     return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=86400" } });
-  } catch {
+  } catch (err) {
+    // Uma página fora do intervalo é esperada; qualquer outra falha é problema de
+    // renderização e precisa aparecer, não virar um 404 mudo.
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes("out of range")) console.error(`[provas] falha ao renderizar a página ${number} de ${paper.id}:`, err);
     return new Response("Página não encontrada", { status: 404 });
   }
 }

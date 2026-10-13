@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { normalizeName } from "@/engines/questions/answer-key";
+import { normalizeName, sameSubject } from "@/engines/questions/answer-key";
 import type { CatalogSubject } from "./prompts";
 
 export interface CompetitionCatalog {
@@ -42,8 +42,32 @@ export function matchSubject(catalog: CompetitionCatalog, slug: string, sectionN
   for (const candidate of [slug, sectionName]) {
     if (!candidate) continue;
     const wanted = normalizeName(candidate);
-    const found = catalog.subjects.find((s) => normalizeName(s.name) === wanted || normalizeName(s.name).startsWith(wanted.slice(0, 5)));
+    const exact = catalog.subjects.find((s) => normalizeName(s.name) === wanted);
+    if (exact) return exact.id;
+    // O prefixo aproxima "Matematica" de "Matemática", mas só vale quando o nome é de
+    // uma disciplina. "Auditor-Fiscal da Receita Federal do Brasil" é o cargo com que a
+    // FGV nomeia os blocos do gabarito, e casaria com "Auditoria" pelos cinco primeiros
+    // caracteres, carimbando a prova inteira com a disciplina errada.
+    if (namesSeveralSubjects(candidate)) continue;
+    const found = catalog.subjects.find((s) => normalizeName(s.name).startsWith(wanted.slice(0, 5)));
     if (found) return found.id;
   }
+  // As bancas não escrevem o nome da disciplina como o catálogo: "CONHECIMENTOS DE
+  // INFORMÁTICA" é "Informática". Só vale quando uma única disciplina corresponde e
+  // o nome é de uma disciplina só: um bloco como "Português, Estudos Sociais e
+  // Ciências" cobre três, e atribuir a primeira que casa classificaria errado.
+  for (const candidate of [slug, sectionName]) {
+    if (!candidate || namesSeveralSubjects(candidate)) continue;
+    const found = catalog.subjects.filter((s) => sameSubject(s.name, candidate));
+    if (found.length === 1) return found[0]!.id;
+  }
   return null;
+}
+
+/** Palavras que sobram num nome de bloco depois de tirar o que não diz disciplina. */
+const FILLER = new Set(["conhecimentos", "nocoes", "prova", "provas", "dia", "lingua", "de", "do", "da", "e", "parte", "caderno", "area", "geral", "basicos", "especificos"]);
+
+function namesSeveralSubjects(name: string) {
+  const words = normalizeName(name).split(" ").filter((w) => w.length >= 3 && !FILLER.has(w));
+  return words.length > 3;
 }

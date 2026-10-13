@@ -33,6 +33,56 @@ export function keyLetter(raw: string): string | null {
   return letter?.[1] ? letter[1].toUpperCase() : null;
 }
 
+/**
+ * Pares número → letra recuperados da camada de texto do PDF do gabarito.
+ * Bancas como o Cebraspe imprimem uma linha de números e, logo abaixo, as
+ * letras na mesma ordem; no texto do arquivo isso vira uma sequência de
+ * números seguida da sequência de letras (as células vazias da tabela saem
+ * como "0"). Ler isso é exato, e a leitura por IA erra de vez em quando —
+ * costuma trocar dois itens vizinhos, o que passa despercebido porque as duas
+ * letras existem no gabarito.
+ *
+ * O resultado pode ser parcial: só as linhas reconhecidas entram. Devolve null
+ * quando o mesmo número aparece com letras diferentes, o que acontece nos
+ * gabaritos que trazem várias versões da prova lado a lado — aí o texto não
+ * diz qual é qual e só a leitura por IA resolve.
+ */
+export function keyPairsFromText(text: string): Map<number, { label: string; annulled: boolean }> | null {
+  const flat = text.replace(/\s+/g, " ");
+  const pairs = new Map<number, { label: string; annulled: boolean }>();
+  for (const match of flat.matchAll(/((?:\d{1,3} ){3,}\d{1,3}) ((?:[A-EX] ){3,}[A-EX])(?![A-EX0-9])/g)) {
+    const numbers = match[1]!.split(" ").map(Number).filter((n) => n > 0);
+    const letters = match[2]!.split(" ");
+    if (numbers.length !== letters.length || new Set(numbers).size !== numbers.length) continue;
+    for (const [i, number] of numbers.entries()) {
+      const letter = letters[i]!;
+      const entry = { label: letter === "X" ? "" : letter, annulled: letter === "X" };
+      const previous = pairs.get(number);
+      if (previous && (previous.label !== entry.label || previous.annulled !== entry.annulled)) return null;
+      pairs.set(number, entry);
+    }
+  }
+  return pairs.size >= 10 ? pairs : null;
+}
+
+/**
+ * Corrige um gabarito lido pela IA com os pares que o texto do PDF garante.
+ * Só vale quando o gabarito tem um bloco só: com várias versões não dá para
+ * saber a qual delas o texto se refere.
+ */
+export function correctKeyFromText(sections: KeySection[], text: string) {
+  const pairs = sections.length === 1 ? keyPairsFromText(text) : null;
+  if (!pairs) return { sections, corrected: 0 };
+  let corrected = 0;
+  const answers = sections[0]!.answers.map((answer) => {
+    const printed = pairs.get(answer.number);
+    if (!printed || (printed.label === answer.label && printed.annulled === answer.annulled)) return answer;
+    corrected++;
+    return { ...answer, ...printed };
+  });
+  return { sections: [{ ...sections[0]!, answers }], corrected };
+}
+
 const tokens = (value: string) => normalizeName(value).split(" ").filter(Boolean);
 
 /**
@@ -69,6 +119,16 @@ export function sameSubject(a: string, b: string) {
 }
 
 /**
+ * Primeiro item numerado do gabarito. Cadernos que continuam outro — o Cebraspe
+ * separa conhecimentos básicos e específicos em arquivos distintos — começam no
+ * item 51, 61 ou onde o edital mandar, e não no 1.
+ */
+export function keyFirstNumber(sections: KeySection[]) {
+  const numbers = sections.flatMap((s) => s.answers.map((a) => a.number)).filter((n) => n > 0);
+  return numbers.length ? Math.min(...numbers) : 1;
+}
+
+/**
  * The model's description of the paper is a guess; the official key is not.
  * When the key has a single block for this version (one subject list for the
  * whole paper), its count wins and a section map that leaves numbers out is
@@ -92,11 +152,25 @@ export function reconcileWithKey(paperVersion: string, sections: KeySection[], l
  * same number may remain in two subjects (e.g. two days in one key); the
  * question's own subject settles it in `keyForQuestion`.
  */
-export function resolvePaperKey(paperVersion: string, layout: PaperSection[], sections: KeySection[]): { entries: SectionKeyEntry[]; note: string | null } {
+export function resolvePaperKey(
+  paperVersion: string,
+  layout: PaperSection[],
+  sections: KeySection[],
+  questionCount?: number | null,
+): { entries: SectionKeyEntry[]; note: string | null } {
   const versions = [...new Set(sections.map((s) => normalizeName(s.version)))];
   let candidates = sections.filter((s) => versionMatches(paperVersion, s.version, sections.map((x) => x.version)));
   if (candidates.length === 0 && versions.length <= 1) candidates = sections;
   if (candidates.length === 0) return { entries: [], note: `Nenhuma versão do gabarito corresponde a "${paperVersion}". Versões no gabarito: ${[...new Set(sections.map((s) => s.version))].join(", ")}.` };
+
+  // Gabaritos que trazem os dois dias do concurso lado a lado repetem a
+  // numeração: o mesmo número existe em dois blocos. Quando um deles termina
+  // exatamente no número de questões desta prova e o outro não, é o dela.
+  const numbers = candidates.flatMap((s) => s.answers.map((a) => a.number));
+  if (questionCount && numbers.length !== new Set(numbers).size) {
+    const byCount = candidates.filter((s) => Math.max(...s.answers.map((a) => a.number)) === questionCount);
+    if (byCount.length === 1) candidates = byCount;
+  }
 
   const toEntries = (s: KeySection, from = -Infinity, to = Infinity): SectionKeyEntry[] =>
     s.answers
@@ -115,6 +189,12 @@ export function resolvePaperKey(paperVersion: string, layout: PaperSection[], se
       if (!section) missing.push(part.subject);
       else chosen.push(...toEntries(section, part.from, part.to));
     }
+    // O mapa de partes é a descrição que o modelo fez da prova, e costuma parar
+    // nas primeiras disciplinas. As questões que ele não descreveu continuam no
+    // gabarito: entram por número, e um empate entre blocos fica para
+    // `keyForQuestion` resolver pela disciplina da questão.
+    const mapped = new Set(layout.flatMap((s) => Array.from({ length: s.to - s.from + 1 }, (_, i) => s.from + i)));
+    for (const section of candidates) for (const entry of toEntries(section)) if (!mapped.has(entry.number)) chosen.push(entry);
   }
   return { entries: chosen, note: missing.length ? `Gabarito sem a parte de ${missing.join(", ")}.` : null };
 }

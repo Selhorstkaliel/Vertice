@@ -161,5 +161,85 @@
     "versao": "1ª fase",
     "prova": "https://www.vestibular.ita.br/provas/2025_fase1.pdf",
     "gabarito": "https://www.vestibular.ita.br/provas/gabarito_2025.pdf"
+  },
+  {
+    "concurso": "eear",
+    "ano": 2025,
+    "versao": "CFS 2/2025, código 09",
+    "prova": "https://ingresso.eear.fab.mil.br/SOO/escolaridade/CFS%202%202025/prova_cfs%202%202025_cod_09.pdf?concurso=CFS+2+2025",
+    "gabarito": "https://ingresso.eear.fab.mil.br/SOO/escolaridade/CFS%202%202025/prova_cfs%202%202025_cod_09.pdf?concurso=CFS+2+2025",
+    "observacao": "A EEAR publica o caderno com o gabarito oficial nas primeiras páginas: o mesmo arquivo serve de prova e de gabarito."
+  },
+  {
+    "concurso": "receita-federal",
+    "ano": 2023,
+    "versao": "Auditor-Fiscal, tipo 1 (manhã)",
+    "prova": "https://conhecimento.fgv.br/sites/default/files/concursos/cns101-auditor-fiscal-da-receita-federal-do-brasil-afrfbcns101-tipo-1.pdf",
+    "gabarito": "https://conhecimento.fgv.br/sites/default/files/concursos/serfb-gabarito-defintivo-auditor-_0.pdf",
+    "observacao": "Prova aplicada em 19/03/2023, banca FGV. Gabarito definitivo."
+  },
+  {
+    "concurso": "receita-federal",
+    "ano": 2023,
+    "versao": "Analista-Tributário, tipo 1 (manhã)",
+    "prova": "https://conhecimento.fgv.br/sites/default/files/concursos/cns102-analista-tributario-da-receita-federal-do-brasil-atrfbcns102-tipo-1.pdf",
+    "gabarito": "https://conhecimento.fgv.br/sites/default/files/concursos/gabarito-definitivo-rfb_analista-_0.pdf",
+    "observacao": "Prova aplicada em 19/03/2023, banca FGV. Gabarito definitivo."
+  },
+  {
+    "concurso": "banco-do-brasil",
+    "ano": 2023,
+    "versao": "Prova A, Agente Comercial, gabarito 1",
+    "prova": "https://inscricao.cesgranrio.com.br/storage.ashx?file=pdf%2Fbb0122%2Fprovas%2FPROVA%20A%20-%20AGENTE%20COMERCIAL%20-%20GABARITO%201.pdf",
+    "gabarito": "https://inscricao.cesgranrio.com.br/storage.ashx?file=pdf%2Fbb0122%2Fgabarito%2FGABARITO%20-%2023-04-2023%20-%20PROVA%20A%20-%20ESCRITUR%C3%81RIO%20-%20AGENTE%20COMERCIAL.pdf",
+    "observacao": "Seleção externa BB 2022/001, prova aplicada em 23/04/2023, banca Cesgranrio."
+  },
+  {
+    "concurso": "caixa",
+    "ano": 2021,
+    "versao": "Técnico Bancário Novo",
+    "prova": "https://inscricao.cesgranrio.com.br/storage.ashx?file=pdf%2Fcaixa0121%2Fprovas%2Fcaixa0121_prova_tb.pdf",
+    "gabarito": "https://inscricao.cesgranrio.com.br/storage.ashx?file=pdf%2Fcaixa0121%2Fprovas%2Fcaixa0121_gabarito_tb.pdf",
+    "observacao": "Concurso Caixa 1/2021/NM, prova aplicada em 31/10/2021, banca Cesgranrio."
+  },
+  {
+    "concurso": "petrobras",
+    "ano": 2015,
+    "versao": "Advogado Júnior",
+    "prova": "https://inscricao.cesgranrio.com.br/storage.ashx?file=pdf%2Fpetrobras0115%2Fpetrobras0115_prova.pdf",
+    "gabarito": "https://inscricao.cesgranrio.com.br/storage.ashx?file=pdf%2Fpetrobras0115%2Fpetrobras0115_gabarito.pdf",
+    "observacao": "Processo seletivo Petrobras 1/2015, prova aplicada em 02/08/2015, banca Cesgranrio."
+  },
+  {
+    "concurso": "policia-federal",
+    "ano": 2021,
+    "versao": "Agente de Polícia Federal",
+    "prova": "https://cdn.cebraspe.org.br/concursos/pf_21/arquivos/CARGO_2_AGENTE_DE_POLCIA_FEDERAL.PDF",
+    "gabarito": "https://cdn.cebraspe.org.br/concursos/pf_21/arquivos/GAB_DEFINITIVO_MATRIZ_577_PF_002_00.PDF",
+    "observacao": "Prova de julgamento de itens (certo ou errado), banca Cebraspe. Gabarito definitivo por cargo."
+  },
+  {
+    "concurso": "prf",
+    "ano": 2021,
+    "versao": "Policial Rodoviário Federal, caderno 578",
+    "prova": "https://cdn.cebraspe.org.br/concursos/prf_21/arquivos/578_PRF_001_01.PDF",
+    "gabarito": "https://cdn.cebraspe.org.br/concursos/prf_21/arquivos/GAB_DEFINITIVO_578_PRF_001_01.PDF",
+    "observacao": "Prova de julgamento de itens (certo ou errado), banca Cebraspe. Gabarito definitivo."
+  },
+  {
+    "concurso": "inss",
+    "ano": 2022,
+    "versao": "Técnico do Seguro Social, conhecimentos básicos, caderno 760",
+    "prova": "https://cdn.cebraspe.org.br/concursos/inss_22/arquivos/760_INSS_CB1_01.PDF",
+    "gabarito": "https://cdn.cebraspe.org.br/concursos/inss_22/arquivos/GAB_DEFINITIVO_760_INSS_CB1_01.PDF",
+    "observacao": "Prova de julgamento de itens (certo ou errado), aplicada em 27/11/2022, banca Cebraspe."
+  },
+  {
+    "concurso": "inss",
+    "ano": 2022,
+    "versao": "Técnico do Seguro Social, conhecimentos específicos, caderno 760",
+    "prova": "https://cdn.cebraspe.org.br/concursos/inss_22/arquivos/760_INSS_001_01.PDF",
+    "gabarito": "https://cdn.cebraspe.org.br/concursos/inss_22/arquivos/GAB_DEFINITIVO_760_INSS_001_01.PDF",
+    "observacao": "Continuação do caderno 760: itens 51 a 120, com gabarito definitivo próprio."
   }
 ]
