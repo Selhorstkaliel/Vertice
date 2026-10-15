@@ -58,49 +58,29 @@ export interface ReviewQueueFilters {
   banca?: string;
 }
 
-/** Review queue: learning cards first, then reviews by due date, then today's allowance of new cards. */
-export async function getReviewQueue(userId: string, tz: string, filters: ReviewQueueFilters, limit = 60) {
-  const now = new Date();
-  const { end } = todayRange(tz);
-  const where: Prisma.FlashcardWhereInput = {
-    userId,
-    suspended: false,
-    ...(filters.materia ? { subjectId: filters.materia } : {}),
-    ...(filters.banca ? { examBoardId: filters.banca } : {}),
-  };
-  const select = {
-    id: true,
-    front: true,
-    back: true,
-    type: true,
-    isBoardPattern: true,
-    patternEvidence: true,
-    state: true,
-    intervalDays: true,
-    ease: true,
-    reps: true,
-    lapses: true,
-    learningStep: true,
-    dueAt: true,
-    lastReviewedAt: true,
-    subject: { select: { name: true } },
-    topic: { select: { name: true } },
-    examBoard: { select: { name: true } },
-    sourceQuestion: { select: { figures: true } },
-  } satisfies Prisma.FlashcardSelect;
+const queueSelect = {
+  id: true,
+  front: true,
+  back: true,
+  type: true,
+  isBoardPattern: true,
+  patternEvidence: true,
+  state: true,
+  intervalDays: true,
+  ease: true,
+  reps: true,
+  lapses: true,
+  learningStep: true,
+  dueAt: true,
+  lastReviewedAt: true,
+  subject: { select: { name: true } },
+  topic: { select: { name: true } },
+  examBoard: { select: { name: true } },
+  sourceQuestion: { select: { figures: true } },
+} satisfies Prisma.FlashcardSelect;
 
-  const introduced = await newIntroducedToday(userId, tz);
-  const [learning, reviews, fresh] = await Promise.all([
-    db.flashcard.findMany({ where: { ...where, state: { in: ["LEARNING", "RELEARNING"] }, dueAt: { lt: end } }, select, orderBy: { dueAt: "asc" }, take: limit }),
-    db.flashcard.findMany({ where: { ...where, state: "REVIEW", dueAt: { lt: end } }, select, orderBy: { dueAt: "asc" }, take: limit }),
-    db.flashcard.findMany({
-      where: { ...where, state: "NEW" },
-      select,
-      orderBy: { createdAt: "asc" },
-      take: Math.max(0, NEW_CARDS_PER_DAY - introduced),
-    }),
-  ]);
-  return [...learning, ...reviews, ...fresh].slice(0, limit).map((c) => ({
+function toQueueCard(c: Prisma.FlashcardGetPayload<{ select: typeof queueSelect }>, now: Date) {
+  return {
     id: c.id,
     front: c.front,
     back: c.back,
@@ -113,7 +93,42 @@ export async function getReviewQueue(userId: string, tz: string, filters: Review
     topicName: c.topic?.name ?? null,
     boardName: c.examBoard?.name ?? null,
     previews: previewIntervals(toSchedule(c), now),
-  }));
+  };
+}
+
+/** Review queue: learning cards first, then reviews by due date, then today's allowance of new cards. */
+export async function getReviewQueue(userId: string, tz: string, filters: ReviewQueueFilters, limit = 60) {
+  const now = new Date();
+  const { end } = todayRange(tz);
+  const where: Prisma.FlashcardWhereInput = {
+    userId,
+    suspended: false,
+    ...(filters.materia ? { subjectId: filters.materia } : {}),
+    ...(filters.banca ? { examBoardId: filters.banca } : {}),
+  };
+  const select = queueSelect;
+
+  const introduced = await newIntroducedToday(userId, tz);
+  const [learning, reviews, fresh] = await Promise.all([
+    db.flashcard.findMany({ where: { ...where, state: { in: ["LEARNING", "RELEARNING"] }, dueAt: { lt: end } }, select, orderBy: { dueAt: "asc" }, take: limit }),
+    db.flashcard.findMany({ where: { ...where, state: "REVIEW", dueAt: { lt: end } }, select, orderBy: { dueAt: "asc" }, take: limit }),
+    db.flashcard.findMany({
+      where: { ...where, state: "NEW" },
+      select,
+      orderBy: { createdAt: "asc" },
+      take: Math.max(0, NEW_CARDS_PER_DAY - introduced),
+    }),
+  ]);
+  return [...learning, ...reviews, ...fresh].slice(0, limit).map((c) => toQueueCard(c, now));
+}
+
+/** Specific cards of the student, in the given order (daily mission). */
+export async function getCardsByIds(userId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+  const now = new Date();
+  const rows = await db.flashcard.findMany({ where: { id: { in: ids }, userId, suspended: false }, select: queueSelect });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.map((id) => byId.get(id)).filter((c): c is NonNullable<typeof c> => !!c).map((c) => toQueueCard(c, now));
 }
 
 export type QueueCard = Awaited<ReturnType<typeof getReviewQueue>>[number];

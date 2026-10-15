@@ -27,7 +27,7 @@ export interface PlayerQuestion {
   flashcardId: string | null;
 }
 
-function ReasonPicker({ value, onPick, disabled }: { value: Reason | null; onPick: (r: Reason) => void; disabled?: boolean }) {
+export function ReasonPicker({ value, onPick, disabled }: { value: Reason | null; onPick: (r: Reason) => void; disabled?: boolean }) {
   return (
     <div role="radiogroup" aria-label="Por que você errou?" className="flex flex-wrap gap-1.5">
       {(Object.keys(ERROR_REASON_LABEL) as Reason[]).map((r) => {
@@ -53,7 +53,23 @@ function ReasonPicker({ value, onPick, disabled }: { value: Reason | null; onPic
   );
 }
 
-export function QuestionPlayer({ question, nextHref, afterAnswer }: { question: PlayerQuestion; nextHref: string | null; afterAnswer: React.ReactNode }) {
+export function QuestionPlayer({
+  question,
+  nextHref,
+  afterAnswer,
+  onNext,
+  nextLabel = "Próxima questão",
+  reviewOfEntryId,
+}: {
+  question: PlayerQuestion;
+  nextHref: string | null;
+  afterAnswer: React.ReactNode;
+  /** Inside a sequence (daily mission): called instead of navigating, and skipping is not offered. */
+  onNext?: () => void;
+  nextLabel?: string;
+  /** Redoing an error-notebook entry: no duplicate entry, and a right answer closes it. */
+  reviewOfEntryId?: string;
+}) {
   const router = useRouter();
   const [selected, setSelected] = React.useState<string | null>(null);
   const [result, setResult] = React.useState<AnswerResult | null>(null);
@@ -87,6 +103,7 @@ export function QuestionPlayer({ question, nextHref, afterAnswer }: { question: 
         questionId: question.id,
         optionId: selected,
         timeSpentSec: Math.round((Date.now() - startedAt.current) / 1000),
+        ...(reviewOfEntryId ? { reviewOfEntryId } : {}),
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -95,6 +112,7 @@ export function QuestionPlayer({ question, nextHref, afterAnswer }: { question: 
       setResult(r.data);
       setEntryId(r.data.errorEntryId);
       if (r.data.isCorrect) setReviewLater(false);
+      if (r.data.resolvedEntryId) toast.success("Erro marcado como revisado no Caderno de Erros.");
       requestAnimationFrame(() => resultRef.current?.focus());
     });
   };
@@ -280,9 +298,9 @@ export function QuestionPlayer({ question, nextHref, afterAnswer }: { question: 
               {favorite ? "Favorita" : "Favoritar"}
             </Button>
             <span className="flex-1" />
-            {nextHref && (
-              <Button variant="primary" size="sm" onClick={() => router.push(nextHref)}>
-                Próxima questão
+            {(onNext || nextHref) && (
+              <Button variant="primary" size="sm" onClick={() => (onNext ? onNext() : router.push(nextHref!))}>
+                {nextLabel}
               </Button>
             )}
           </div>
@@ -295,7 +313,7 @@ export function QuestionPlayer({ question, nextHref, afterAnswer }: { question: 
             <Star className={cn(favorite && "fill-current")} />
             {favorite ? "Favorita" : "Favoritar"}
           </Button>
-          {nextHref && (
+          {nextHref && !onNext && (
             <Button asChild variant="ghost" size="sm">
               <Link href={nextHref}>Pular questão</Link>
             </Button>

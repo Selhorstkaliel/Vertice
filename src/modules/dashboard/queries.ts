@@ -9,6 +9,7 @@ import { getItemsForDay } from "@/modules/plan/queries";
 import { markMissedItems } from "@/modules/plan/service";
 import { questionStats, readinessFor, streakFor, studiedMinutes } from "@/modules/performance/metrics";
 import { countDueFlashcards } from "@/modules/flashcards/service";
+import { getTodayMissionSummary } from "@/modules/mission/service";
 
 export async function getDashboard(user: CurrentUser & { profile: NonNullable<CurrentUser["profile"]> }) {
   const tz = user.profile.timezone;
@@ -19,7 +20,7 @@ export async function getDashboard(user: CurrentUser & { profile: NonNullable<Cu
 
   await markMissedItems(user.id, tz);
 
-  const [primary, todayItems, minutesToday, minutesWeek, weekQuestions, monthQuestions, flashDue, reviewsDue, streak, plan, pendingRecs] =
+  const [primary, todayItems, minutesToday, minutesWeek, weekQuestions, monthQuestions, flashDue, reviewsDue, streak, plan, pendingRecs, mission] =
     await Promise.all([
       getPrimaryEnrollment(user.id),
       getItemsForDay(user.id, tz, today),
@@ -35,6 +36,7 @@ export async function getDashboard(user: CurrentUser & { profile: NonNullable<Cu
         select: { id: true, recommendedMinutes: true },
       }),
       db.aiRecommendation.count({ where: { userId: user.id, status: "PENDING" } }),
+      getTodayMissionSummary(user.id, tz),
     ]);
 
   const ctx = await loadStudyContext(user.id, tz, today);
@@ -111,6 +113,7 @@ export async function getDashboard(user: CurrentUser & { profile: NonNullable<Cu
         }
       : null,
     enrollmentsActive: ctx.enrollments.length,
+    mission: mission ?? { targetMinutes: user.profile.missionMinutes, estMinutes: user.profile.missionMinutes, completed: false },
     pendingRecommendations: pendingRecs,
     dayKeyOfTomorrow: toDateKey(new Date(Date.now() + 86_400_000), tz),
   };

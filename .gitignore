@@ -22,3 +22,9 @@ coverage/
 
 # Provas importadas, páginas renderizadas e figuras das questões
 /storage/
+
+# Arquivos locais
+dev.log
+# Relatórios de npm run redacao:calibrar (contêm redações)
+calibracao-*.json
+.claude/settings.local.json

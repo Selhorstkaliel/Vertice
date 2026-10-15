@@ -10,8 +10,6 @@ import { MentorProviderError, MentorRefusalError, runToolCalls, type MentorStrea
 
 export { MentorRefusalError, MentorProviderError, type MentorStreamEvent, type MentorTurnResult };
 
-/** Hard ceiling on model calls per student message (tool rounds included). */
-const MAX_ROUNDS = 8;
 
 let client: Anthropic | null = null;
 /** Set when the account rejects the server-side fallback beta; later calls skip it. */
@@ -40,7 +38,8 @@ export function buildMentorRequest(messages: Anthropic.Beta.BetaMessageParam[], 
     // Re-runs a request declined by safety classifiers on Anthropic's recommended fallback model.
     ...(mentorFallbacksActive() ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     thinking: { type: "adaptive" as const },
-    ...(env.MENTOR_EFFORT ? { output_config: { effort: env.MENTOR_EFFORT } } : {}),
+    // Chat-style answers hold quality at medium effort; set MENTOR_EFFORT to change it.
+    output_config: { effort: env.MENTOR_EFFORT ?? ("medium" as const) },
     cache_control: { type: "ephemeral" as const },
     system: [{ type: "text" as const, text: MENTOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" as const } }],
     tools: MENTOR_TOOLS,
@@ -90,8 +89,10 @@ async function runAnthropicTurn(
   let model = mentorProvider().model;
   let truncated = false;
 
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    const lastRound = round === MAX_ROUNDS - 1;
+  // Hard ceiling on model calls per student message (tool rounds included); per plan later.
+  const maxRounds = env.MENTOR_MAX_ROUNDS;
+  for (let round = 0; round < maxRounds; round++) {
+    const lastRound = round === maxRounds - 1;
     let roundText = "";
     let message: Anthropic.Beta.BetaMessage;
     for (;;) {

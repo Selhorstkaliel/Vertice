@@ -35,8 +35,8 @@ export function questionAiConfigured() {
   return !!env.GEMINI_API_KEY && env.QUESTION_AI_MODELS.length > 0;
 }
 
-export function availableModels() {
-  return env.QUESTION_AI_MODELS.filter((m) => exhausted.get(m) !== today());
+export function availableModels(models: string[] = env.QUESTION_AI_MODELS) {
+  return models.filter((m) => exhausted.get(m) !== today());
 }
 
 function key() {
@@ -119,6 +119,8 @@ export interface GenerateJsonOptions {
   signal?: AbortSignal;
   /** Called before waiting for a per-minute limit, for progress messages. */
   onWait?: (seconds: number) => void;
+  /** Models to try in order (default: QUESTION_AI_MODELS). */
+  models?: string[];
 }
 
 export interface GenerateJsonResult<T> {
@@ -149,7 +151,7 @@ export async function generateJson<T>(options: GenerateJsonOptions): Promise<Gen
 
   let requests = 0;
   let lastError: QuestionAiError | null = null;
-  for (const model of availableModels()) {
+  for (const model of availableModels(options.models)) {
     let invalidRetries = 0;
     for (let attempt = 0; attempt < 5; attempt++) {
       requests++;

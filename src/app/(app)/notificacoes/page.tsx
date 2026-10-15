@@ -18,6 +18,10 @@ const TYPE_DESCRIPTION: Record<keyof typeof NOTIFICATION_TYPE_LABEL, string> = {
   GOAL: "Meta semanal de estudo concluída.",
   RECOMMENDATION: "Novas sugestões do planejador aguardando sua decisão.",
   SYSTEM: "Avisos importantes sobre a sua conta.",
+  STAGE_DEADLINE: "Documentos, exames e prazos das etapas: 7, 3 e 1 dia antes.",
+  ESSAY: "Tema da semana e redações previstas pela sua cadência.",
+  EDITAL_DOCUMENT: "Novo edital, retificação ou resultado publicado nos sites oficiais, com o link do documento.",
+  EDITAL_UPDATE: "Datas, etapas e conteúdo atualizados depois da conferência do edital.",
 };
 
 export default async function NotificationsPage() {

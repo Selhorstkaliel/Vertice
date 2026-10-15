@@ -7,6 +7,9 @@ import { db } from "@/lib/db";
 import { fail, fromZodError, ok, runAction, type ActionResult } from "@/lib/action";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { DEADLINE_GRACE_MS, finalizeAttempt, selectQuestions } from "./service";
+import { examModeMinutes } from "@/engines/simulations/scoring";
+import { officialQuestionCount, ruleForCompetition } from "@/modules/scoring/service";
+import { getDiagnosticOffer } from "./diagnostic";
 
 function revalidateSimulations() {
   for (const p of ["/simulados", "/desempenho", "/painel", "/caderno-de-erros", "/edital", "/questoes"]) revalidatePath(p);
@@ -21,6 +24,8 @@ const createSchema = z.object({
   questionCount: z.number().int().min(3, "Mínimo de 3 questões.").max(120, "Máximo de 120 questões."),
   timeLimitMinutes: z.number().int().min(5, "Mínimo de 5 minutos.").max(600, "Máximo de 10 horas.").nullable(),
   preferUnanswered: z.boolean(),
+  /** Official time and question count, scored by the competition rule. */
+  examMode: z.boolean().optional(),
 });
 
 export type SimulationInput = z.input<typeof createSchema>;
@@ -50,13 +55,31 @@ export async function createSimulationAction(input: SimulationInput): Promise<Ac
   if (d.competitionId && !(await db.competition.findFirst({ where: { id: d.competitionId, ...visible }, select: { id: true } }))) return fail("Concurso inválido.");
   if (d.examBoardId && !(await db.examBoard.findUnique({ where: { id: d.examBoardId }, select: { id: true } }))) return fail("Banca inválida.");
 
+  const rule = d.competitionId ? await ruleForCompetition(d.competitionId) : null;
+  let count = d.questionCount;
+  let quotas: Record<string, number> | undefined;
+  let official: number | null = null;
+  if (d.examMode) {
+    if (!d.competitionId) return fail("O modo prova precisa de um concurso.");
+    const edital = await db.competitionSubject.findMany({ where: { competitionId: d.competitionId }, select: { subjectId: true, questionCount: true } });
+    official = officialQuestionCount(rule, edital.map((e) => e.questionCount));
+    if (official) {
+      count = Math.min(120, official);
+      const scale = count / official;
+      const perSubject = rule?.subjects.length && rule.subjects.every((s) => s.questions) ? rule.subjects.map((s) => [s.subjectId, s.questions!] as const) : edital.map((e) => [e.subjectId, e.questionCount ?? 0] as const);
+      quotas = Object.fromEntries(perSubject.filter(([id]) => d.subjectIds.includes(id)).map(([id, n]) => [id, Math.round(n * scale)]));
+    }
+    if (!rule?.durationMinutes && !d.timeLimitMinutes) return fail("Sem o tempo oficial cadastrado, informe o tempo do simulado.");
+  }
+
   const { questionIds, available } = await selectQuestions(user.id, {
     competitionId: d.competitionId,
     examBoardId: d.examBoardId,
     subjectIds: d.subjectIds,
     difficulty: d.difficulty,
-    count: d.questionCount,
+    count,
     preferUnanswered: d.preferUnanswered,
+    quotas,
   });
   if (questionIds.length < 3) {
     return fail(
@@ -66,6 +89,9 @@ export async function createSimulationAction(input: SimulationInput): Promise<Ac
     );
   }
 
+  // Exam mode: the official time, scaled when the bank has fewer questions than the real exam.
+  const timeLimitMinutes = d.examMode && rule?.durationMinutes ? examModeMinutes(rule.durationMinutes, official, questionIds.length) : d.timeLimitMinutes;
+
   const simulation = await db.simulation.create({
     data: {
       userId: user.id,
@@ -74,13 +100,15 @@ export async function createSimulationAction(input: SimulationInput): Promise<Ac
       examBoardId: d.examBoardId || null,
       difficulty: d.difficulty,
       questionCount: questionIds.length,
-      timeLimitMinutes: d.timeLimitMinutes,
+      timeLimitMinutes,
+      examMode: !!d.examMode,
+      scoringRuleId: rule?.id ?? null,
       subjects: { create: d.subjectIds.map((subjectId) => ({ subjectId })) },
       questions: { create: questionIds.map((questionId, order) => ({ questionId, order })) },
     },
     select: { id: true },
   });
-  const attempt = await startAttempt(user.id, simulation.id, d.timeLimitMinutes);
+  const attempt = await startAttempt(user.id, simulation.id, timeLimitMinutes);
   revalidateSimulations();
   redirect(`/simulados/tentativa/${attempt.id}`);
 }
@@ -101,6 +129,7 @@ export async function redrawSimulationAction(simulationId: string): Promise<Acti
   const user = await requireOnboardedUser();
   const s = await db.simulation.findFirst({ where: { id: simulationId, userId: user.id }, include: { subjects: true } });
   if (!s) return fail("Simulado não encontrado.");
+  if (s.purpose === "DIAGNOSTIC") return fail("O diagnóstico não é sorteado de novo. Crie um simulado do concurso.");
   return createSimulationAction({
     title: s.title,
     competitionId: s.competitionId ?? undefined,
@@ -110,6 +139,7 @@ export async function redrawSimulationAction(simulationId: string): Promise<Acti
     questionCount: s.questionCount,
     timeLimitMinutes: s.timeLimitMinutes,
     preferUnanswered: true,
+    examMode: s.examMode,
   });
 }
 
@@ -118,6 +148,8 @@ const answerSchema = z.object({
   simulationQuestionId: z.string(),
   optionId: z.string().nullable().optional(),
   flagged: z.boolean().optional(),
+  /** Seconds on this question since the last report; summed on the server. */
+  elapsedSec: z.number().int().min(0).max(3600).optional(),
 });
 
 /** Saves an answer or doubt flag. Never reveals correctness while the attempt is open. */
@@ -126,7 +158,7 @@ export async function saveSimulationAnswerAction(input: z.input<typeof answerSch
     const user = await requireOnboardedUser();
     const parsed = answerSchema.safeParse(input);
     if (!parsed.success) return fail("Dados inválidos.");
-    const { attemptId, simulationQuestionId, optionId, flagged } = parsed.data;
+    const { attemptId, simulationQuestionId, optionId, flagged, elapsedSec } = parsed.data;
 
     const attempt = await db.simulationAttempt.findFirst({ where: { id: attemptId, userId: user.id }, select: { id: true, status: true, deadlineAt: true, simulationId: true } });
     if (!attempt) return fail("Tentativa não encontrada.");
@@ -149,6 +181,7 @@ export async function saveSimulationAnswerAction(input: z.input<typeof answerSch
       update: {
         ...(optionId !== undefined ? { selectedOptionId: optionId, answeredAt: optionId ? new Date() : null } : {}),
         ...(flagged !== undefined ? { flagged } : {}),
+        ...(elapsedSec ? { timeSpentSec: { increment: elapsedSec } } : {}),
       },
       create: {
         attemptId,
@@ -156,6 +189,7 @@ export async function saveSimulationAnswerAction(input: z.input<typeof answerSch
         selectedOptionId: optionId ?? null,
         answeredAt: optionId ? new Date() : null,
         flagged: flagged ?? false,
+        timeSpentSec: elapsedSec ?? 0,
       },
     });
     return ok({ expired: false });
@@ -178,4 +212,45 @@ export async function deleteSimulationAction(simulationId: string): Promise<Acti
     revalidateSimulations();
     return ok(null, "Simulado excluído. As respostas já registradas continuam no histórico de questões.");
   });
+}
+
+/**
+ * Optional placement test: official questions of the main competition only,
+ * no timer (a suggested time is shown). The result feeds topic progress like
+ * any simulation, so the next plan already weighs the weak topics.
+ */
+export async function startDiagnosticAction(): Promise<ActionResult<never>> {
+  const user = await requireOnboardedUser();
+  const offer = await getDiagnosticOffer(user.id);
+  if (!offer) return fail("Escolha um concurso principal antes do diagnóstico.");
+  if (offer.existing?.status === "IN_PROGRESS") redirect(`/simulados/tentativa/${offer.existing.id}`);
+  if (offer.plan.status === "UNAVAILABLE") return fail("Ainda não há questões oficiais suficientes deste concurso para um diagnóstico.");
+
+  const { questionIds } = await selectQuestions(user.id, {
+    competitionId: offer.competitionId,
+    subjectIds: Object.keys(offer.plan.quotas),
+    count: offer.plan.total,
+    preferUnanswered: true,
+    sources: ["OFFICIAL"],
+    quotas: offer.plan.quotas,
+  });
+  if (questionIds.length < 5) return fail("Ainda não há questões oficiais suficientes deste concurso para um diagnóstico.");
+
+  const simulation = await db.simulation.create({
+    data: {
+      userId: user.id,
+      title: `Diagnóstico ${offer.competitionName}`,
+      competitionId: offer.competitionId,
+      purpose: "DIAGNOSTIC",
+      questionCount: questionIds.length,
+      timeLimitMinutes: null,
+      scoringRuleId: (await ruleForCompetition(offer.competitionId))?.id ?? null,
+      subjects: { create: Object.keys(offer.plan.quotas).map((subjectId) => ({ subjectId })) },
+      questions: { create: questionIds.map((questionId, order) => ({ questionId, order })) },
+    },
+    select: { id: true },
+  });
+  const attempt = await startAttempt(user.id, simulation.id, null);
+  revalidateSimulations();
+  redirect(`/simulados/tentativa/${attempt.id}`);
 }

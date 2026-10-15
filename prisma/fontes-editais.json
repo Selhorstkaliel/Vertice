@@ -1,0 +1,153 @@
+{
+  "conferidoEm": "2026-10-14",
+  "observacao": "Só páginas oficiais (órgãos e bancas). Cada endereço foi aberto em 14/10/2026 pelo downloader do Vértice (src/lib/public-download.ts) ou, quando inacessível daqui, confirmado por publicação oficial. 'situacao' diz o que aconteceu: ok = o robô lê a página; bloqueia-robos = o site exige navegador (desafio Cloudflare) e o PDF entra por envio manual; inacessivel = o site não respondeu daqui (DNS recusado ou conexão recusada). Tipos: lista-de-links (documentos direto na página), indice (lista de páginas de concurso; avisa quando surge uma nova), somente-navegador.",
+  "dou": {
+    "fonte": "INLABS, da Imprensa Nacional (https://inlabs.in.gov.br), acesso gratuito e oficial ao DOU completo em XML desde 01/01/2020, com cadastro (e-mail e senha). Exemplo oficial: https://github.com/Imprensa-Nacional/inlabs. Os arquivos ficam disponíveis por cerca de 4 meses.",
+    "secoes": ["DO3", "DO3E"],
+    "nota": "Editais de concursos saem na Seção 3. A busca usa os termos de cada concurso abaixo; só roda com INLABS_EMAIL e INLABS_SENHA configurados."
+  },
+  "concursos": [
+    {
+      "concurso": "espcex",
+      "termosDou": ["Escola Preparatória de Cadetes do Exército", "EsPCEx"],
+      "fontes": [
+        { "url": "https://www.espcex.eb.mil.br/", "tipo": "lista-de-links", "situacao": "inacessivel", "observacao": "Endereço citado no edital e no manual do candidato. Daqui, o DNS dos subdomínios eb.mil.br foi recusado e a conexão foi recusada pelo servidor. Fica desativada até responder; o DOU cobre a publicação do edital." }
+      ]
+    },
+    {
+      "concurso": "esa",
+      "termosDou": ["Escola de Sargentos das Armas", "Escola de Sargentos de Logística"],
+      "fontes": [
+        { "url": "https://www.esa.eb.mil.br/", "tipo": "lista-de-links", "situacao": "inacessivel", "observacao": "Endereço citado no Edital nº 1/SCA (DOU de 27/03/2026). DNS recusado daqui. Fica desativada até responder; o DOU cobre a publicação do edital." }
+      ]
+    },
+    {
+      "concurso": "ime",
+      "termosDou": ["Instituto Militar de Engenharia"],
+      "fontes": [
+        { "url": "https://www.ime.eb.mil.br/", "tipo": "lista-de-links", "situacao": "inacessivel", "observacao": "Domínio usado nas provas oficiais já importadas. DNS recusado daqui. Fica desativada até responder; o DOU cobre a publicação do edital." }
+      ]
+    },
+    {
+      "concurso": "ita",
+      "termosDou": ["Instituto Tecnológico de Aeronáutica"],
+      "fontes": [
+        { "url": "https://www.vestibular.ita.br/topo.htm", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Moldura superior do site do vestibular: edital do concurso, programa de matérias e orientações de redação. Página em ISO-8859-1. Sem robots.txt." },
+        { "url": "https://www.vestibular.ita.br/principal.htm", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Moldura principal: avisos, gabaritos, convocações e resultados de cada fase." }
+      ]
+    },
+    {
+      "concurso": "eear",
+      "termosDou": ["Curso de Formação de Sargentos da Aeronáutica", "CFS"],
+      "fontes": [
+        { "url": "https://ingresso.eear.fab.mil.br/", "tipo": "lista-de-links", "filtro": "/CFS%20|CFS ", "situacao": "ok", "observacao": "Portal de ingresso da EEAR: as Instruções Específicas (IE) de cada exame CFS ficam em /SOO/editais/<sigla>/ie.pdf, com os anexos. Sem robots.txt." }
+      ]
+    },
+    {
+      "concurso": "afa",
+      "termosDou": ["Cursos de Formação de Oficiais Aviadores", "CFOAV"],
+      "fontes": [
+        { "url": "https://ingresso.afaepcar.fab.mil.br/", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Portal de ingresso da AFA citado nos editais. Responde 403 ao robô. As IE são aprovadas por portaria DIRENS publicada no DOU, que é a fonte automática." }
+      ]
+    },
+    {
+      "concurso": "efomm",
+      "termosDou": ["Escola de Formação de Oficiais da Marinha Mercante", "EFOMM"],
+      "fontes": [
+        { "url": "https://www.marinha.mil.br/ciaga", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Página do CIAGA citada no edital do PS-EFOMM. O site da Marinha usa desafio Cloudflare (exige navegador). Envio manual do PDF; o edital resumido sai no DOU." }
+      ]
+    },
+    {
+      "concurso": "escola-naval",
+      "termosDou": ["Escola Naval", "CPAEN"],
+      "fontes": [
+        { "url": "https://www.marinha.mil.br/sspm/node/24", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Página de concursos de carreira do SSPM (Serviço de Seleção do Pessoal da Marinha). Desafio Cloudflare. Envio manual; DOU como fonte automática." }
+      ]
+    },
+    {
+      "concurso": "colegio-naval",
+      "termosDou": ["Colégio Naval", "CPACN"],
+      "fontes": [
+        { "url": "https://www.marinha.mil.br/sspm/node/44", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Página do Colégio Naval no SSPM, com os editais do CPACN por ano. Desafio Cloudflare. Envio manual; DOU como fonte automática." }
+      ]
+    },
+    {
+      "concurso": "eam",
+      "termosDou": ["Escolas de Aprendizes-Marinheiros", "CPAEAM"],
+      "fontes": [
+        { "url": "https://www.marinha.mil.br/sspm/node/24", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Página de concursos de carreira do SSPM (inclui a EAM). Desafio Cloudflare. Envio manual; DOU como fonte automática." }
+      ]
+    },
+    {
+      "concurso": "policia-federal",
+      "termosDou": ["Polícia Federal", "DGP/PF"],
+      "fontes": [
+        { "url": "https://www.gov.br/pf/pt-br/acesso-a-informacao/servidores/concursos/edital", "tipo": "indice", "seguir": "/concursos/edital/carreira-policial-\\d{4}", "situacao": "ok", "observacao": "Índice dos concursos da PF no gov.br. Avisa quando surge um concurso novo e segue as páginas 'Carreira Policial - ano'." },
+        { "url": "https://www.gov.br/pf/pt-br/acesso-a-informacao/servidores/concursos/edital/carreira-policial-2025", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Concurso vigente (2025): editais publicados pela própria PF." },
+        { "url": "https://www.cebraspe.org.br/concursos/PF_25", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Página do concurso no Cebraspe, citada pela PF. O site do Cebraspe é montado em JavaScript (sem links no HTML); não usamos API interna não documentada." }
+      ]
+    },
+    {
+      "concurso": "prf",
+      "termosDou": ["Polícia Rodoviária Federal"],
+      "fontes": [
+        { "url": "https://www.gov.br/prf/pt-br", "tipo": "indice", "filtro": "concurso", "situacao": "ok", "observacao": "Página inicial da PRF no gov.br: hoje só aponta o Concurso PRF 2021 no Cebraspe. Avisa quando surgir link de concurso novo. Não há banca definida para o próximo concurso." },
+        { "url": "https://www.cebraspe.org.br/concursos/prf_21", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Concurso de 2021 no Cebraspe (JavaScript)." }
+      ]
+    },
+    {
+      "concurso": "inss",
+      "termosDou": ["Instituto Nacional do Seguro Social", "Técnico do Seguro Social"],
+      "fontes": [
+        { "url": "https://www.gov.br/inss/pt-br/acesso-a-informacao/servidores/concursos-publicos", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Concursos públicos do INSS no gov.br (editais e nomeações). O último concurso (2022) foi do Cebraspe." }
+      ]
+    },
+    {
+      "concurso": "receita-federal",
+      "termosDou": ["Receita Federal do Brasil", "Auditor-Fiscal", "Analista-Tributário"],
+      "fontes": [
+        { "url": "https://conhecimento.fgv.br/concursos/rfb22", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Página do concurso RFB na FGV, com editais, retificações e resultados (atualizada até out/2026)." },
+        { "url": "https://conhecimento.fgv.br/concursos", "tipo": "indice", "filtro": "receita|rfb", "situacao": "ok", "observacao": "Lista de concursos da FGV: avisa quando surgir um concurso novo da Receita. robots.txt da FGV só bloqueia pastas técnicas." }
+      ]
+    },
+    {
+      "concurso": "banco-do-brasil",
+      "termosDou": ["Banco do Brasil"],
+      "fontes": [
+        { "url": "https://www.cesgranrio.org.br/concursos?id=index-205112&ucat=25", "tipo": "indice", "filtro": "banco-do-brasil|banco do brasil", "situacao": "ok", "observacao": "Concursos em andamento da Cesgranrio (banca dos últimos concursos do BB). O site do BB é montado em JavaScript. As páginas de concurso da Cesgranrio carregam os documentos por JavaScript: o aviso traz o link, e o PDF entra por envio manual." }
+      ]
+    },
+    {
+      "concurso": "caixa",
+      "termosDou": ["Caixa Econômica Federal"],
+      "fontes": [
+        { "url": "https://www.cesgranrio.org.br/concursos?id=index-205112&ucat=25", "tipo": "indice", "filtro": "caixa", "situacao": "ok", "observacao": "Concursos em andamento da Cesgranrio (hoje inclui Caixa 01/2025). O site da Caixa entra em laço de redirecionamento sem cookies." },
+        { "url": "https://www.cesgranrio.org.br/concurso/caixa-economica-federal-caixa-01-2025/", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Página do concurso vigente: os documentos são carregados por JavaScript no portal da Cesgranrio." }
+      ]
+    },
+    {
+      "concurso": "petrobras",
+      "termosDou": ["Petróleo Brasileiro S.A.", "Petrobras"],
+      "fontes": [
+        { "url": "https://petrobras.com.br/pt/quem-somos/carreiras/concursos/", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Página de concursos da Petrobras, com todos os editais de cada processo seletivo." },
+        { "url": "https://www.cesgranrio.org.br/concursos?id=index-205112&ucat=25", "tipo": "indice", "filtro": "petrobras", "situacao": "ok", "observacao": "Concursos em andamento da Cesgranrio." }
+      ]
+    },
+    {
+      "concurso": "petrobras-advogado",
+      "termosDou": ["Petróleo Brasileiro S.A.", "Petrobras"],
+      "fontes": [
+        { "url": "https://petrobras.com.br/pt/quem-somos/carreiras/concursos/", "tipo": "lista-de-links", "filtro": "advog|jur[ií]d|ntj|superior", "situacao": "ok", "observacao": "Mesma página da Petrobras, filtrada para nível superior/jurídico." }
+      ]
+    },
+    {
+      "concurso": "transpetro",
+      "termosDou": ["Petrobras Transporte S.A.", "Transpetro"],
+      "fontes": [
+        { "url": "https://transpetro.com.br/transpetro-institucional/quem-somos/carreiras/concursos.htm", "tipo": "indice", "situacao": "ok", "observacao": "Página de concursos da Transpetro (quadro de terra e de mar)." },
+        { "url": "https://www.cesgranrio.org.br/concursos?id=index-205112&ucat=25", "tipo": "indice", "filtro": "transpetro", "situacao": "ok", "observacao": "Concursos em andamento da Cesgranrio (hoje inclui Transpetro 2026)." },
+        { "url": "https://www.cesgranrio.org.br/concurso/transpetro-2026/", "tipo": "somente-navegador", "situacao": "bloqueia-robos", "observacao": "Processo seletivo vigente: documentos por JavaScript no portal da Cesgranrio." }
+      ]
+    }
+  ]
+}

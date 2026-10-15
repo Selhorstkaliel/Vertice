@@ -152,6 +152,24 @@ export const NOTIFICATION_TYPE_LABEL = {
   GOAL: "Metas",
   RECOMMENDATION: "Recomendações",
   SYSTEM: "Avisos do sistema",
+  STAGE_DEADLINE: "Prazos das etapas",
+  ESSAY: "Redação",
+  EDITAL_DOCUMENT: "Documentos oficiais publicados",
+  EDITAL_UPDATE: "Edital atualizado",
+} as const;
+
+export const EDITAL_DOC_TYPE_LABEL = { EDITAL: "Edital", RETIFICACAO: "Retificação", CONVOCACAO: "Convocação", RESULTADO: "Resultado", OUTRO: "Outro documento" } as const;
+export const EDITAL_DOC_STATUS_LABEL = { NEW: "Novo", READING: "Em leitura", REVIEW: "Em revisão", PUBLISHED: "Publicado", IGNORED: "Ignorado", FAILED: "Falhou" } as const;
+
+export const ESSAY_STATUS_LABEL = { DRAFT: "Rascunho", SUBMITTED: "Em correção", CORRECTED: "Corrigida" } as const;
+export const ESSAY_THEME_STATUS_LABEL = { DRAFT: "Aguardando revisão", PUBLISHED: "Publicado", REJECTED: "Rejeitado" } as const;
+
+export const STAGE_ITEM_KIND_LABEL = {
+  DOCUMENT: "Documento",
+  HEALTH_EXAM: "Exame da inspeção de saúde",
+  REGISTRATION_DEADLINE: "Prazo de inscrição",
+  APPEAL_DEADLINE: "Prazo de recurso",
+  OTHER: "Outro",
 } as const;
 
 export const CALENDAR_EVENT_TYPE_LABEL = {

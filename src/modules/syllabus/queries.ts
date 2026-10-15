@@ -2,6 +2,15 @@ import "server-only";
 import type { TopicStatus, VerificationStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { weightShares } from "@/modules/competitions/queries";
+import { getOfficialIncidence, incidenceBasis } from "@/modules/competitions/incidence";
+
+export interface NodeIncidence {
+  questions: number;
+  papers: number;
+  subjectPapers: number;
+  /** 0..1 for leaves (null when unknown); parents only carry counts. */
+  incidence: number | null;
+}
 
 export interface TopicNode {
   id: string;
@@ -18,6 +27,7 @@ export interface TopicNode {
   errors: number;
   lastReviewedAt: Date | null;
   nextReviewAt: Date | null;
+  incidence: NodeIncidence | null;
   children: TopicNode[];
 }
 
@@ -58,11 +68,20 @@ export async function getEditalTree(userId: string, competitionId: string) {
 
   const topics = competition.topics.map((t) => t.topic);
   const ids = topics.map((t) => t.id);
-  const [progress, flashcards, errors] = await Promise.all([
+  const [progress, flashcards, errors, officialMap] = await Promise.all([
     db.topicProgress.findMany({ where: { userId, topicId: { in: ids } } }),
     db.flashcard.groupBy({ by: ["topicId"], where: { userId, topicId: { in: ids } }, _count: { _all: true } }),
     db.errorEntry.groupBy({ by: ["topicId"], where: { userId, topicId: { in: ids } }, _count: { _all: true } }),
+    getOfficialIncidence([competition.id]),
   ]);
+  const official = officialMap.get(competition.id) ?? null;
+  const subjectPapersOf = (subjectId: string) => official?.subjectPapers.get(subjectId) ?? 0;
+  /** Papers the topic or any descendant appeared in. */
+  function subtreePapers(t: (typeof topics)[number], acc = new Set<string>()): Set<string> {
+    official?.topicPapers.get(t.id)?.forEach((p) => acc.add(p));
+    for (const k of childrenOf.get(`${t.subjectId}:${t.id}`) ?? []) subtreePapers(k, acc);
+    return acc;
+  }
   const progressBy = new Map(progress.map((p) => [p.topicId, p]));
   const flashBy = new Map(flashcards.map((f) => [f.topicId, f._count._all]));
   const errorsBy = new Map(errors.map((e) => [e.topicId, e._count._all]));
@@ -99,6 +118,16 @@ export async function getEditalTree(userId: string, competitionId: string) {
         errors: errorsBy.get(t.id) ?? 0,
         lastReviewedAt: p?.lastReviewedAt ?? null,
         nextReviewAt: p?.nextReviewAt ?? null,
+        incidence: (() => {
+          const m = official?.byTopic.get(t.id);
+          if (!official || official.papers === 0) return null;
+          return {
+            questions: m?.questions ?? 0,
+            papers: m?.papers ?? 0,
+            subjectPapers: subjectPapersOf(t.subjectId),
+            incidence: m?.incidence ?? null,
+          };
+        })(),
         children: [],
       };
     }
@@ -124,6 +153,15 @@ export async function getEditalTree(userId: string, competitionId: string) {
       errors: kids.reduce((a, k) => a + k.errors, 0) + (errorsBy.get(t.id) ?? 0),
       lastReviewedAt: lastReviews.length ? new Date(Math.max(...lastReviews.map((d) => d.getTime()))) : null,
       nextReviewAt: nextReviews.length ? new Date(Math.min(...nextReviews.map((d) => d.getTime()))) : null,
+      incidence:
+        official && official.papers > 0
+          ? {
+              questions: kids.reduce((a, k) => a + (k.incidence?.questions ?? 0), 0),
+              papers: subtreePapers(t).size,
+              subjectPapers: subjectPapersOf(t.subjectId),
+              incidence: null,
+            }
+          : null,
       children: kids,
     };
   }
@@ -158,6 +196,7 @@ export async function getEditalTree(userId: string, competitionId: string) {
 
   return {
     competition: { id: competition.id, name: competition.name, editable: competition.ownerId === userId, verification: competition.verification, sourceNote: competition.sourceNote },
+    incidenceBasis: incidenceBasis(official),
     subjects,
     coverage,
   };

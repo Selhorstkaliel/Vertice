@@ -57,6 +57,9 @@ export default async function FlashcardsPage({ searchParams }: { searchParams: P
         actions={
           <>
             {formDialog}
+            <Button asChild variant="ghost">
+              <Link href="/revisao-offline">Revisar offline</Link>
+            </Button>
             <Button asChild variant="primary" disabled={stats.dueToday === 0}>
               <Link href={reviewHref}>Revisar agora{stats.dueToday > 0 ? ` (${stats.dueToday})` : ""}</Link>
             </Button>

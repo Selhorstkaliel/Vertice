@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { competitionTitle, effectiveExamDate } from "@/modules/competitions/queries";
 import { PLAN_ITEM_KIND_LABEL } from "@/lib/labels";
+import { essaysEnabled } from "@/lib/plan-limits";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireOnboardedUser();
@@ -20,7 +21,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     db.notification.count({ where: { userId: user.id, readAt: null } }),
     db.studentCompetition.findFirst({
       where: { userId: user.id, isPrimary: true },
-      select: { customExamDate: true, competition: { select: { name: true, year: true, examDate: true } } },
+      select: { customExamDate: true, keepCustomExamDate: true, competition: { select: { name: true, year: true, examDate: true } } },
     }),
     db.studySession.findFirst({
       where: { userId: user.id, status: { in: ["RUNNING", "PAUSED"] } },
@@ -63,6 +64,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         isDemo: user.isDemo,
         showMilitary: user.profile.track !== "PUBLIC" || militaryEnrollments > 0,
         isAdmin: user.isAdmin,
+        showEssays: essaysEnabled(user),
         primaryCompetition: primary ? competitionTitle(primary.competition, effectiveExamDate(primary).date) : null,
         unreadNotifications: unread,
       }}

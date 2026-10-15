@@ -39,11 +39,11 @@ function privateAddress(ip: string) {
   return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
 }
 
-async function publicAddress(url: URL) {
+async function publicAddress(url: URL, allowPrivate = false) {
   if (!["https:", "http:"].includes(url.protocol)) throw new PublicDownloadError("Use um endereço http ou https.");
   const addresses = await lookup(url.hostname, { all: true }).catch(() => []);
   if (addresses.length === 0) throw new PublicDownloadError(`Não foi possível encontrar o site ${url.hostname}.`);
-  if (addresses.some((a) => privateAddress(a.address))) throw new PublicDownloadError("Endereços de rede interna não são permitidos.");
+  if (!allowPrivate && addresses.some((a) => privateAddress(a.address))) throw new PublicDownloadError("Endereços de rede interna não são permitidos.");
   // Connect to the address that was checked, so DNS cannot change between check and request.
   return addresses[0]!;
 }
@@ -61,7 +61,7 @@ function request(url: URL, address: { address: string; family: number }, options
       url,
       {
         method: "GET",
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Vertice/1.0; importador de provas oficiais)", Accept: options.accept },
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Vertice/1.0; robô de editais e provas oficiais; +https://vertice.app)", Accept: options.accept },
         // Newer Node asks for every address (all: true) and expects a list back.
         lookup: ((_host: string, opts: { all?: boolean }, cb: (...args: unknown[]) => void) =>
           opts.all ? cb(null, [{ address: address.address, family: address.family }]) : cb(null, address.address, address.family)) as never,
@@ -125,7 +125,11 @@ function isChainError(err: unknown) {
   return code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE" || code === "UNABLE_TO_GET_ISSUER_CERT_LOCALLY";
 }
 
-export async function downloadPublicFile(rawUrl: string, { maxBytes, timeoutMs = 120_000 }: { maxBytes: number; timeoutMs?: number }) {
+/**
+ * `allowPrivate` exists only for automated tests against a local stand-in site;
+ * callers must never enable it in production.
+ */
+export async function downloadPublicFile(rawUrl: string, { maxBytes, timeoutMs = 120_000, allowPrivate = false }: { maxBytes: number; timeoutMs?: number; allowPrivate?: boolean }) {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -133,7 +137,7 @@ export async function downloadPublicFile(rawUrl: string, { maxBytes, timeoutMs =
     throw new PublicDownloadError("Endereço inválido.");
   }
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const address = await publicAddress(url);
+    const address = await publicAddress(url, allowPrivate);
     let res: RawResponse;
     try {
       res = await request(url, address, { maxBytes, timeoutMs, accept: "application/pdf,application/zip,*/*" });

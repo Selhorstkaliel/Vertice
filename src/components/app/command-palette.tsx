@@ -27,11 +27,13 @@ export function CommandPalette({
   onOpenChange,
   showMilitary,
   isAdmin,
+  showEssays,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   showMilitary: boolean;
   isAdmin: boolean;
+  showEssays: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
@@ -73,7 +75,7 @@ export function CommandPalette({
     router.push(href);
   };
 
-  const pages = [...NAV_GROUPS.flat().filter((i) => visibleNavItem(i, { showMilitary, isAdmin })), SETTINGS_ITEM];
+  const pages = [...NAV_GROUPS.flat().filter((i) => visibleNavItem(i, { showMilitary, isAdmin, showEssays })), SETTINGS_ITEM];
   const grouped = hits.reduce<Record<string, SearchHit[]>>((acc, h) => {
     (acc[h.group] ??= []).push(h);
     return acc;

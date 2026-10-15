@@ -8,7 +8,7 @@ import { env } from "@/lib/env";
  * Private file storage on the server disk. Files are addressed by a kind
  * (folder) and a generated name; user input never becomes a path.
  */
-export type StorageKind = "provas" | "paginas" | "figuras";
+export type StorageKind = "provas" | "paginas" | "figuras" | "editais";
 
 const SAFE_NAME = /^[a-z0-9][a-z0-9._-]{0,120}$/;
 

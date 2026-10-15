@@ -1,4 +1,5 @@
 import "server-only";
+import { env } from "@/lib/env";
 import type { MentorContext } from "../data";
 import { MENTOR_SYSTEM_PROMPT } from "../prompt";
 import type { MentorProvider } from "../provider";
@@ -11,7 +12,6 @@ import { MentorProviderError, MentorRefusalError, runToolCalls, type MentorStrea
  * path; only the wire format differs.
  */
 
-const MAX_ROUNDS = 8;
 const REQUEST_TIMEOUT_MS = 120_000;
 const MAX_RETRY_WAIT_SEC = 45;
 
@@ -124,8 +124,8 @@ export async function runCompatTurn(
   let model = provider.model;
   let truncated = false;
 
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    const body = buildCompatRequest(provider, messages, round === MAX_ROUNDS - 1, effort);
+  for (let round = 0; round < env.MENTOR_MAX_ROUNDS; round++) {
+    const body = buildCompatRequest(provider, messages, round === env.MENTOR_MAX_ROUNDS - 1, effort);
     let response: Response;
     for (let attempt = 0; ; attempt++) {
       try {

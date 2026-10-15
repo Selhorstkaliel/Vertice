@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
+import { limitsFor } from "@/lib/plan-limits";
+import { recordAiUsage } from "@/modules/ai/usage";
 import { firstName, formatClock, weekdayName } from "@/lib/format";
 import { isoWeekdayOfKey, localNow } from "@/lib/time";
 import { getCurrentUser } from "@/modules/auth/session";
@@ -35,8 +36,9 @@ export async function POST(request: Request) {
   if (!burst.ok) return json(429, retryMessage(burst.retryAfterSec));
   const profile = user.profile;
   const tz = profile.timezone;
-  if ((await mentorUsageToday(user.id, tz)) >= env.MENTOR_DAILY_LIMIT) {
-    return json(429, `Você atingiu o limite de ${env.MENTOR_DAILY_LIMIT} mensagens por dia com o Mentor. As análises automáticas continuam disponíveis.`);
+  const dailyLimit = limitsFor(user).mentorDailyMessages;
+  if ((await mentorUsageToday(user.id, tz)) >= dailyLimit) {
+    return json(429, `Você atingiu o limite de ${dailyLimit} mensagens por dia com o Mentor. As análises automáticas continuam disponíveis.`);
   }
 
   const userMessage = await db.mentorMessage.create({
@@ -84,6 +86,7 @@ export async function POST(request: Request) {
             grounding: asGrounding({ mode: "ai", sources: result.sources, recommendationIds: result.recommendationIds, model: result.model, truncated: result.truncated, usage: result.usage }),
           },
         });
+        await recordAiUsage({ userId: user.id, feature: "MENTOR", model: result.model, usage: result.usage, refId: saved.id }).catch((e) => console.error("[mentor] usage log", e));
         const [view] = await toMessageViews(user.id, [saved]);
         send({ type: "done", message: view! });
       } catch (err) {

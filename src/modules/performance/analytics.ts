@@ -85,6 +85,25 @@ export async function weakestTopics(userId: string, limit = 8) {
     .slice(0, limit);
 }
 
+/** Error reasons in the last `weeks` weeks (rolling), with the totals behind the shares. */
+export async function errorReasonDistribution(userId: string, weeks = 4) {
+  const since = new Date(Date.now() - weeks * 7 * 86_400_000);
+  const rows = await db.errorEntry.groupBy({ by: ["reason"], where: { userId, createdAt: { gte: since } }, _count: { _all: true } });
+  const total = rows.reduce((a, r) => a + r._count._all, 0);
+  const unclassified = rows.find((r) => r.reason === null)?._count._all ?? 0;
+  const classified = total - unclassified;
+  return {
+    weeks,
+    total,
+    classified,
+    unclassified,
+    reasons: rows
+      .filter((r) => r.reason !== null)
+      .map((r) => ({ reason: r.reason!, label: ERROR_REASON_LABEL[r.reason!], count: r._count._all, share: classified ? r._count._all / classified : 0 }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
 export async function simulationSeries(userId: string) {
   const rows = await db.simulationAttempt.findMany({
     where: { userId, status: { in: ["FINISHED", "EXPIRED"] } },

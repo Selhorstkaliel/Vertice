@@ -443,3 +443,27 @@ export async function moveStageAction(stageId: string, direction: "up" | "down")
     return ok(null);
   });
 }
+
+const cutoffSchema = z
+  .object({
+    score: z.number().min(-1000).max(100000).nullable(),
+    max: z.number().positive("A nota máxima precisa ser maior que zero.").max(100000).nullable(),
+  })
+  .refine((v) => (v.score === null) === (v.max === null), { message: "Informe a nota de corte e a nota máxima da prova.", path: ["max"] })
+  .refine((v) => v.score === null || v.max === null || v.score <= v.max, { message: "A nota de corte não pode passar da nota máxima.", path: ["score"] });
+
+/** Cut-off typed by the student (always shown as informed by them). Null clears it. */
+export async function setEnrollmentCutoffAction(competitionId: string, input: z.input<typeof cutoffSchema>): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const user = await requireOnboardedUser();
+    const parsed = cutoffSchema.safeParse(input);
+    if (!parsed.success) return fromZodError(parsed.error);
+    const { count } = await db.studentCompetition.updateMany({
+      where: { userId: user.id, competitionId },
+      data: { cutoffScore: parsed.data.score, cutoffMaxScore: parsed.data.max },
+    });
+    if (count === 0) return fail("Adicione este concurso à sua lista para guardar a nota de corte.");
+    revalidatePath("/simulados", "layout");
+    return ok(null, parsed.data.score === null ? "Nota de corte removida." : "Nota de corte salva.");
+  });
+}

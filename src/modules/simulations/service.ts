@@ -1,9 +1,11 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import type { Difficulty, Prisma } from "@prisma/client";
+import type { ContentSource, Difficulty, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { explanationAuthorship, questionFigures } from "@/lib/question-content";
 import { applyStudyToTopic } from "@/modules/syllabus/progress";
+import { scoreAttempt, type Outcome } from "@/engines/simulations/scoring";
+import { parseRuleSubjects, toEngineRule } from "@/modules/scoring/service";
 
 /** Grace period for answers sent right as the timer ends (network latency). */
 export const DEADLINE_GRACE_MS = 5_000;
@@ -24,6 +26,10 @@ export interface SelectionCriteria {
   difficulty?: Difficulty | null;
   count: number;
   preferUnanswered: boolean;
+  /** Only these sources (the diagnostic uses official questions only). */
+  sources?: ContentSource[];
+  /** Questions per subject (exam mode, diagnostic); the rest is filled round robin. */
+  quotas?: Record<string, number>;
 }
 
 /**
@@ -37,6 +43,7 @@ export async function selectQuestions(userId: string, c: SelectionCriteria) {
       { subjectId: { in: c.subjectIds } },
       c.examBoardId ? { examBoardId: c.examBoardId } : {},
       c.difficulty ? { difficulty: c.difficulty } : {},
+      c.sources?.length ? { source: { in: c.sources } } : {},
       c.competitionId ? { OR: [{ competitionId: c.competitionId }, { topic: { competitions: { some: { competitionId: c.competitionId } } } }] } : {},
     ],
   };
@@ -52,9 +59,16 @@ export async function selectQuestions(userId: string, c: SelectionCriteria) {
     else entry.seen.push(q.id);
     bySubject.set(q.subjectId, entry);
   }
-  const queues = [...bySubject.values()].map((e) => (c.preferUnanswered ? [...shuffle(e.fresh), ...shuffle(e.seen)] : shuffle([...e.fresh, ...e.seen])));
+  const queueBySubject = new Map(
+    [...bySubject.entries()].map(([id, e]) => [id, c.preferUnanswered ? [...shuffle(e.fresh), ...shuffle(e.seen)] : shuffle([...e.fresh, ...e.seen])]),
+  );
+  const queues = [...queueBySubject.values()];
 
   const picked: string[] = [];
+  for (const [subjectId, quota] of Object.entries(c.quotas ?? {})) {
+    const q = queueBySubject.get(subjectId);
+    for (let n = 0; q && q.length && n < quota && picked.length < c.count; n++) picked.push(q.shift()!);
+  }
   let progressed = true;
   while (picked.length < c.count && progressed) {
     progressed = false;
@@ -93,6 +107,9 @@ export async function getAttemptForTaking(userId: string, attemptId: string) {
           id: true,
           title: true,
           timeLimitMinutes: true,
+          examMode: true,
+          purpose: true,
+          scoringRule: { select: { mode: true, wrongPenalty: true } },
           questions: {
             orderBy: { order: "asc" },
             select: {
@@ -104,6 +121,7 @@ export async function getAttemptForTaking(userId: string, attemptId: string) {
                   type: true,
                   statement: true,
                   figures: true,
+                  source: true,
                   subject: { select: { name: true } },
                   // Never select isCorrect here: this payload goes to the browser.
                   options: { select: { id: true, label: true, text: true }, orderBy: { order: "asc" } },
@@ -130,6 +148,7 @@ export async function finalizeAttempt(userId: string, attemptId: string, tz: str
       simulation: {
         include: {
           questions: { include: { question: { include: { options: true } } }, orderBy: { order: "asc" } },
+          scoringRule: true,
         },
       },
       answers: true,
@@ -137,6 +156,7 @@ export async function finalizeAttempt(userId: string, attemptId: string, tz: str
   });
   if (!attempt) return null;
   if (attempt.status !== "IN_PROGRESS") return attempt.id;
+  const outcomes: { subjectId: string; outcome: Outcome }[] = [];
 
   const expired = !!attempt.deadlineAt && now.getTime() > attempt.deadlineAt.getTime() + DEADLINE_GRACE_MS;
   const endedAt = expired && attempt.deadlineAt ? attempt.deadlineAt : now;
@@ -154,11 +174,13 @@ export async function finalizeAttempt(userId: string, attemptId: string, tz: str
       const right = q.options.find((o) => o.isCorrect);
       if (!selected) {
         unanswered++;
+        outcomes.push({ subjectId: q.subjectId, outcome: "BLANK" });
         continue;
       }
       const isCorrect = selected.isCorrect;
       if (isCorrect) correct++;
       else wrong++;
+      outcomes.push({ subjectId: q.subjectId, outcome: isCorrect ? "CORRECT" : "WRONG" });
 
       await tx.simulationAnswer.update({ where: { id: answer!.id }, data: { isCorrect } });
       const qa = await tx.questionAttempt.create({
@@ -167,6 +189,7 @@ export async function finalizeAttempt(userId: string, attemptId: string, tz: str
           questionId: q.id,
           selectedOptionId: selected.id,
           isCorrect,
+          timeSpentSec: answer?.timeSpentSec ? answer.timeSpentSec : null,
           context: "SIMULATION",
           simulationAttemptId: attempt.id,
           createdAt: answer?.answeredAt ?? endedAt,
@@ -207,6 +230,8 @@ export async function finalizeAttempt(userId: string, attemptId: string, tz: str
     }
 
     const total = attempt.simulation.questions.length;
+    const rule = attempt.simulation.scoringRule;
+    const ruled = rule ? scoreAttempt(toEngineRule({ ...rule, subjects: parseRuleSubjects(rule.subjects) }), outcomes) : null;
     await tx.simulationAttempt.update({
       where: { id: attempt.id },
       data: {
@@ -216,6 +241,8 @@ export async function finalizeAttempt(userId: string, attemptId: string, tz: str
         wrong,
         unanswered,
         score: total ? correct / total : 0,
+        ruleScore: ruled?.points ?? null,
+        ruleDetail: ruled ? (ruled as unknown as Prisma.InputJsonValue) : undefined,
         durationSec: Math.max(0, Math.round((endedAt.getTime() - attempt.startedAt.getTime()) / 1000)),
       },
     });
@@ -232,6 +259,9 @@ export async function getAttemptResult(userId: string, attemptId: string) {
         include: {
           competition: { select: { id: true, name: true, subjects: { select: { subjectId: true, weight: true } } } },
           examBoard: { select: { name: true } },
+          scoringRule: {
+            select: { mode: true, wrongPenalty: true, year: true, cutoffScore: true, maxScore: true, sourceUrl: true, sourceNote: true, verification: true, minTotalShare: true },
+          },
           questions: {
             orderBy: { order: "asc" },
             include: {
@@ -256,11 +286,18 @@ export async function getAttemptResult(userId: string, attemptId: string) {
         },
       },
       answers: true,
+      attempts: { select: { questionId: true, timeSpentSec: true, errorEntry: { select: { id: true, reason: true } } } },
     },
   });
   if (!attempt) return null;
 
   const answers = new Map(attempt.answers.map((a) => [a.simulationQuestionId, a]));
+  const entryByQuestion = new Map(attempt.attempts.map((a) => [a.questionId, a.errorEntry]));
+  const cards = await db.flashcard.findMany({
+    where: { userId, sourceQuestionId: { in: attempt.simulation.questions.map((q) => q.questionId) } },
+    select: { id: true, sourceQuestionId: true },
+  });
+  const cardByQuestion = new Map(cards.map((c) => [c.sourceQuestionId, c.id]));
   const bySubject = new Map<string, { name: string; total: number; correct: number; wrong: number; unanswered: number; weight: number | null }>();
   const byTopic = new Map<string, { name: string; subjectName: string; total: number; correct: number; wrong: number }>();
   const weights = new Map(attempt.simulation.competition?.subjects.map((s) => [s.subjectId, s.weight]) ?? []);
@@ -300,6 +337,10 @@ export async function getAttemptResult(userId: string, attemptId: string) {
       selectedOptionId: selected,
       flagged: a?.flagged ?? false,
       isCorrect,
+      timeSpentSec: a?.timeSpentSec ?? 0,
+      errorEntryId: entryByQuestion.get(q.id)?.id ?? null,
+      errorReason: entryByQuestion.get(q.id)?.reason ?? null,
+      flashcardId: cardByQuestion.get(q.id) ?? null,
     };
   });
 
@@ -327,5 +368,19 @@ export async function getAttemptResult(userId: string, attemptId: string) {
     take: 5,
   });
 
-  return { attempt, review, subjects, topics, biggestLoss: biggestLoss && biggestLoss.lost > 0 ? { ...biggestLoss, weighted: allWeighted } : null, priorityTopic, previous };
+  // The student's own pace outside simulations, when there is enough of it.
+  const [paceRows, enrollment] = await Promise.all([
+    db.questionAttempt.findMany({
+      where: { userId, timeSpentSec: { gt: 0 }, simulationAttemptId: { not: attempt.id } },
+      select: { timeSpentSec: true },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    attempt.simulation.competitionId
+      ? db.studentCompetition.findFirst({ where: { userId, competitionId: attempt.simulation.competitionId }, select: { cutoffScore: true, cutoffMaxScore: true } })
+      : null,
+  ]);
+  const averageSec = paceRows.length >= 20 ? paceRows.reduce((a, r) => a + (r.timeSpentSec ?? 0), 0) / paceRows.length : null;
+
+  return { attempt, review, subjects, topics, averageSec, averageSample: paceRows.length, studentCutoff: enrollment?.cutoffScore != null && enrollment.cutoffMaxScore ? { score: enrollment.cutoffScore, max: enrollment.cutoffMaxScore } : null, biggestLoss: biggestLoss && biggestLoss.lost > 0 ? { ...biggestLoss, weighted: allWeighted } : null, priorityTopic, previous };
 }

@@ -139,5 +139,6 @@ export async function completeOnboardingAction(input: OnboardingInput): Promise<
     await tx.user.update({ where: { id: user.id }, data: { onboardedAt: new Date() } });
   });
 
-  redirect("/rotina?inicio=1");
+  // The optional diagnostic comes first; skipping it leads to the routine.
+  redirect("/diagnostico?inicio=1");
 }

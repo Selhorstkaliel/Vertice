@@ -7,9 +7,13 @@ import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Metric, Notice, PageHeader, Progress, SectionTitle } from "@/components/ui/display";
 import { SimulationControls } from "@/components/simulations/simulation-controls";
+import { SimulationErrorTools } from "@/components/simulations/error-tools";
+import { CutoffForm } from "@/components/simulations/cutoff-form";
+import { compareWithCutoff, slowQuestions, type Outcome, type ScoreResult } from "@/engines/simulations/scoring";
+import { VERIFICATION_LABEL } from "@/lib/labels";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { getAttemptResult } from "@/modules/simulations/service";
-import { formatDateTime, formatMinutes, formatPercent, plural } from "@/lib/format";
+import { formatDateTime, formatMinutes, formatNumber, formatPercent, formatTimer, plural } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Resultado do simulado" };
@@ -19,7 +23,16 @@ export default async function SimulationResultPage({ params }: { params: Promise
   const { attemptId } = await params;
   const result = await getAttemptResult(user.id, attemptId);
   if (!result) notFound();
-  const { attempt, review, subjects, topics, biggestLoss, priorityTopic, previous } = result;
+  const { attempt, review, subjects, topics, biggestLoss, priorityTopic, previous, averageSec, averageSample, studentCutoff } = result;
+  const rule = attempt.simulation.scoringRule;
+  const ruled = attempt.ruleDetail && typeof attempt.ruleDetail === "object" && "maxPoints" in attempt.ruleDetail ? (attempt.ruleDetail as unknown as ScoreResult) : null;
+  const share = ruled ? ruled.share : (attempt.score ?? 0);
+  const catalogCutoff = rule && rule.cutoffScore !== null && rule.maxScore ? { score: rule.cutoffScore, max: rule.maxScore } : null;
+  const cutoff = catalogCutoff ?? studentCutoff;
+  const comparison = compareWithCutoff(share, cutoff);
+  const outcomeOf = (r: (typeof review)[number]): Outcome => (r.isCorrect === true ? "CORRECT" : r.isCorrect === false ? "WRONG" : "BLANK");
+  const slow = slowQuestions(review.map((r) => ({ ...r, outcome: outcomeOf(r) })), averageSec);
+  const isDiagnostic = attempt.simulation.purpose === "DIAGNOSTIC";
   const tz = user.profile.timezone;
   const total = review.length;
   const prev = previous[0];
@@ -40,10 +53,10 @@ export default async function SimulationResultPage({ params }: { params: Promise
 
       <section aria-label="Resultado" className="flex flex-wrap items-end gap-x-14 gap-y-6 border-y py-6">
         <div className="flex flex-col gap-1">
-          <p className="text-base text-fg-subtle">Nota</p>
+          <p className="text-base text-fg-subtle">{ruled ? "Nota pela regra do concurso" : "Nota"}</p>
           <p className="flex items-baseline gap-2">
-            <span className="numeral text-[3.5rem] leading-none font-light text-fg">{attempt.correct}</span>
-            <span className="text-lg text-fg-subtle">de {total}</span>
+            <span className="numeral text-[3.5rem] leading-none font-light text-fg">{ruled ? formatNumber(ruled.points, 2) : attempt.correct}</span>
+            <span className="text-lg text-fg-subtle">de {ruled ? formatNumber(ruled.maxPoints, 2) : total}</span>
           </p>
         </div>
         <dl className="grid flex-1 grid-cols-2 gap-6 sm:grid-cols-5">
@@ -54,7 +67,50 @@ export default async function SimulationResultPage({ params }: { params: Promise
           <Metric label="Não respondidas" value={String(attempt.unanswered)} />
         </dl>
       </section>
-      <p className="-mt-6 text-sm text-fg-subtle">Nota sem penalidade por erro. Os erros foram registrados no Caderno de Erros.</p>
+      <p className="-mt-6 text-sm text-fg-subtle">
+        {ruled
+          ? `${ruled.mode === "PENALTY" ? `Cada erro anulou ${ruled.wrongPenalty} acerto(s); em branco vale zero.` : "Acertos com os pesos do edital, sem desconto por erro."} Regra ${rule?.year ?? ""}: ${rule ? VERIFICATION_LABEL[rule.verification].toLowerCase() : "removida depois do simulado"}. É uma estimativa, não a nota oficial.`
+          : "Nota sem penalidade por erro: este concurso não tem regra de pontuação cadastrada."}{" "}
+        Os erros foram registrados no Caderno de Erros.
+      </p>
+
+      {ruled?.eliminated && (
+        <Notice tone="warning" title="Abaixo do mínimo exigido">
+          {[
+            ...ruled.bySubject.filter((s) => s.belowMinimum).map((s) => `${subjects.find((x) => x.id === s.subjectId)?.name ?? "Disciplina"}: ${formatPercent(s.share)} (mínimo ${formatPercent(s.minShare)})`),
+            ruled.belowTotalMinimum ? `Total: ${formatPercent(ruled.share)}` : null,
+          ]
+            .filter(Boolean)
+            .join("; ")}
+          . Na prova real, isso eliminaria o candidato pela regra cadastrada.
+        </Notice>
+      )}
+
+      {attempt.simulation.competitionId && (
+        <section aria-labelledby="cutoff-title" className="flex flex-col gap-3">
+          <SectionTitle>
+            <span id="cutoff-title">Comparação com a nota de corte</span>
+          </SectionTitle>
+          {comparison && cutoff ? (
+            <p className="max-w-3xl text-base text-fg">
+              Você fez {formatPercent(share)} da nota máxima. A nota de corte foi {formatNumber(cutoff.score, 2)} de {formatNumber(cutoff.max, 2)} ({formatPercent(comparison.cutoffShare)}):{" "}
+              <span className={comparison.above ? "text-positive" : "text-danger"}>
+                {comparison.above ? "acima" : "abaixo"} do corte por {Math.abs(Math.round(comparison.gap * 100))} pontos percentuais
+              </span>
+              . Na escala da prova, seria cerca de {formatNumber(comparison.equivalentPoints, 1)} pontos.
+              <span className="mt-1 block text-sm text-fg-subtle">
+                {catalogCutoff
+                  ? `Nota de corte do catálogo (${rule?.year ?? "ano não informado"}), ${VERIFICATION_LABEL[rule!.verification].toLowerCase()}.`
+                  : "Nota de corte informada por você."}{" "}
+                A comparação é proporcional: o simulado tem {total} questões e pode ter outro nível de dificuldade.
+              </span>
+            </p>
+          ) : (
+            <p className="max-w-3xl text-base text-fg-muted">Não há nota de corte verificada no catálogo. Se você conhece a do último concurso, informe para comparar.</p>
+          )}
+          {!catalogCutoff && <CutoffForm competitionId={attempt.simulation.competitionId} initial={studentCutoff} />}
+        </section>
+      )}
 
       {(biggestLoss || priorityTopic) && (
         <div className="grid gap-4 md:grid-cols-2">
@@ -131,6 +187,62 @@ export default async function SimulationResultPage({ params }: { params: Promise
         </section>
       </div>
 
+      <section aria-labelledby="slow-title" className="flex flex-col gap-3">
+        <SectionTitle>
+          <span id="slow-title">Onde você gastou mais tempo</span>
+        </SectionTitle>
+        {slow.averageSec === null ? (
+          <p className="text-base text-fg-muted">O tempo por questão não foi registrado neste simulado.</p>
+        ) : (
+          <>
+            <p className="max-w-3xl text-sm text-fg-subtle">
+              {averageSec !== null
+                ? `Comparado com a sua média de ${formatTimer(slow.averageSec)} por questão (${averageSample} questões fora deste simulado).`
+                : `Comparado com a média deste simulado, ${formatTimer(slow.averageSec)} por questão: você ainda tem poucas questões com tempo registrado.`}
+            </p>
+            <div className="grid gap-8 md:grid-cols-2">
+              {[
+                { title: "Demorou e errou", items: slow.wrong, empty: "Nenhuma questão errada acima da média de tempo." },
+                { title: "Demorou e acertou ou deixou em branco", items: slow.other, empty: "Nenhuma." },
+              ].map((g) => (
+                <div key={g.title} className="flex flex-col gap-2">
+                  <h3 className="text-base font-medium text-fg">{g.title}</h3>
+                  {g.items.length === 0 ? (
+                    <p className="text-sm text-fg-subtle">{g.empty}</p>
+                  ) : (
+                    <ul className="flex flex-col">
+                      {g.items.slice(0, 8).map((r) => (
+                        <li key={r.number} className="flex items-baseline justify-between gap-3 border-b border-line-soft py-1.5 text-base">
+                          <a href={`#questao-${r.number}`} className="text-fg-muted hover:text-fg">
+                            Questão {r.number}, {r.subjectName}
+                          </a>
+                          <span className="numeral text-sm text-fg-subtle">{formatTimer(r.timeSpentSec)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      {isDiagnostic && (
+        <Notice
+          tone="info"
+          title="Diagnóstico registrado"
+          action={
+            <Button asChild size="sm" variant="primary">
+              <Link href="/rotina?inicio=1">Montar rotina e plano</Link>
+            </Button>
+          }
+        >
+          Os acertos e erros entraram no seu desempenho por tópico. Ao gerar o plano da semana, os tópicos em que você errou ganham prioridade. Se o plano já existia, ele só muda
+          quando você pedir para recalcular.
+        </Notice>
+      )}
+
       <section aria-labelledby="comparison" className="flex flex-col gap-3">
         <SectionTitle>
           <span id="comparison">Comparação com simulados anteriores</span>
@@ -172,7 +284,7 @@ export default async function SimulationResultPage({ params }: { params: Promise
             const correct = r.options.find((o) => o.isCorrect);
             const status = r.isCorrect === true ? { label: "Certa", tone: "text-positive", rail: "bg-positive" } : r.isCorrect === false ? { label: "Errada", tone: "text-danger", rail: "bg-danger" } : { label: "Em branco", tone: "text-fg-subtle", rail: "bg-line" };
             return (
-              <li key={r.number} className="relative border-b border-line-soft">
+              <li key={r.number} id={`questao-${r.number}`} className="relative scroll-mt-24 border-b border-line-soft">
                 <span aria-hidden="true" className={cn("absolute top-4 bottom-4 left-0 w-0.5 rounded-full", status.rail)} />
                 <details className="group py-4 pl-4">
                   <summary className="flex cursor-pointer list-none flex-col gap-1 select-none">
@@ -211,6 +323,7 @@ export default async function SimulationResultPage({ params }: { params: Promise
                     <Link href={`/questoes/${r.questionId}`} className="self-start text-sm text-info hover:underline hover:underline-offset-4">
                       Abrir questão
                     </Link>
+                    {r.isCorrect === false && <SimulationErrorTools entryId={r.errorEntryId} reason={r.errorReason} questionId={r.questionId} flashcardId={r.flashcardId} />}
                   </div>
                 </details>
               </li>

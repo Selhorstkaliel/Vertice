@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/overlay";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/modules/auth/actions";
+import { clearOfflineData } from "@/lib/offline-store";
 import { CommandPalette } from "./command-palette";
 import { RunningSessionPill, type RunningSessionInfo } from "./running-session-pill";
 import { isActive, MOBILE_TABS, NAV_GROUPS, SETTINGS_ITEM, visibleNavItem, type NavItem } from "./nav";
@@ -30,6 +31,7 @@ export interface ShellUser {
   isDemo: boolean;
   showMilitary: boolean;
   isAdmin: boolean;
+  showEssays: boolean;
   primaryCompetition: string | null;
   unreadNotifications: number;
 }
@@ -73,8 +75,8 @@ function NavLink({ item, pathname, onNavigate }: { item: NavItem; pathname: stri
   );
 }
 
-function NavGroups({ pathname, showMilitary, isAdmin, onNavigate }: { pathname: string; showMilitary: boolean; isAdmin: boolean; onNavigate?: () => void }) {
-  const groups = NAV_GROUPS.map((group) => group.filter((item) => visibleNavItem(item, { showMilitary, isAdmin }))).filter((group) => group.length > 0);
+function NavGroups({ pathname, showMilitary, isAdmin, showEssays, onNavigate }: { pathname: string; showMilitary: boolean; isAdmin: boolean; showEssays: boolean; onNavigate?: () => void }) {
+  const groups = NAV_GROUPS.map((group) => group.filter((item) => visibleNavItem(item, { showMilitary, isAdmin, showEssays }))).filter((group) => group.length > 0);
   return (
     <nav aria-label="Principal" className="flex flex-col gap-5">
       {groups.map((group, i) => (
@@ -138,7 +140,13 @@ function UserMenu({ user, compact = false }: { user: ShellUser; compact?: boolea
         </DropdownMenuItem>
         <ThemeToggle />
         <DropdownMenuSeparator />
-        <form action={logoutAction}>
+        {/* Leaving the account wipes what offline review stored on this device first. */}
+        <form
+          action={async () => {
+            await clearOfflineData().catch(() => undefined);
+            await logoutAction();
+          }}
+        >
           <DropdownMenuItem asChild>
             <button type="submit" className="w-full">
               <LogOut />
@@ -222,7 +230,7 @@ export function AppShell({
           <Kbd>Ctrl K</Kbd>
         </button>
         <div className="scrollbar-thin -mx-1 flex-1 overflow-y-auto px-1">
-          <NavGroups pathname={pathname} showMilitary={user.showMilitary} isAdmin={user.isAdmin} />
+          <NavGroups pathname={pathname} showMilitary={user.showMilitary} isAdmin={user.isAdmin} showEssays={user.showEssays} />
         </div>
         <div className="flex flex-col gap-1 border-t pt-3">
           {runningSession && <RunningSessionPill session={runningSession} />}
@@ -294,7 +302,7 @@ export function AppShell({
             Mais
           </DialogPrimitive.Trigger>
           <SheetContent side="bottom" title="Navegação">
-            <NavGroups pathname={pathname} showMilitary={user.showMilitary} isAdmin={user.isAdmin} onNavigate={() => setMoreOpen(false)} />
+            <NavGroups pathname={pathname} showMilitary={user.showMilitary} isAdmin={user.isAdmin} showEssays={user.showEssays} onNavigate={() => setMoreOpen(false)} />
             <div className="mt-5 border-t pt-3">
               <NavLink item={SETTINGS_ITEM} pathname={pathname} onNavigate={() => setMoreOpen(false)} />
             </div>
@@ -302,7 +310,7 @@ export function AppShell({
         </DialogPrimitive.Root>
       </nav>
 
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} showMilitary={user.showMilitary} isAdmin={user.isAdmin} />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} showMilitary={user.showMilitary} isAdmin={user.isAdmin} showEssays={user.showEssays} />
     </div>
   );
 }

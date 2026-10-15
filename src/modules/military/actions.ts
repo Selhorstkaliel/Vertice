@@ -25,6 +25,12 @@ const testSchema = z
     distanceMeters: z.number().int().min(1, "Distância inválida.").max(100_000, "Distância inválida.").nullable(),
     target: z.string().trim().max(20),
     enrollmentId: z.string().max(40).nullable().transform((v) => v || null),
+    testDate: z
+      .string()
+      .nullable()
+      .optional()
+      .refine((v) => !v || isDateKey(v), "Data inválida.")
+      .transform((v) => (v ? keyToDbDate(v) : null)),
     notes: z.string().trim().max(500).optional(),
   })
   .transform((v, ctx) => {
@@ -58,6 +64,7 @@ export async function saveTafTestAction(id: string | null, input: TafTestInput):
       distanceMeters: d.distanceMeters,
       targetValue: d.targetValue,
       studentCompetitionId: d.enrollmentId,
+      testDate: d.testDate,
       notes: d.notes || null,
     };
     if (id) {

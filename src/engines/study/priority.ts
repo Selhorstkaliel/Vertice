@@ -24,6 +24,8 @@ export interface CompetitionLink {
   weightShare: number | null;
   /** Historical incidence 0..1, null when unknown. */
   incidence: number | null;
+  /** Evidence behind `incidence` when it comes from official papers (see incidence.ts). */
+  incidenceSample?: { questions: number; papers: number; subjectPapers: number } | null;
   daysToExam: number | null;
 }
 
@@ -156,12 +158,23 @@ export function scoreTopic(topic: TopicCandidate, targetAccuracy = DEFAULT_TARGE
   }
 
   /* incidence ─ only when actually registered */
-  const knownIncidence = topic.competitions.map((c) => c.incidence).filter((i): i is number => i !== null);
+  const withIncidence = topic.competitions.filter((c) => c.incidence !== null);
   let incidence = 1;
-  if (knownIncidence.length) {
-    const max = Math.max(...knownIncidence);
+  if (withIncidence.length) {
+    const top = withIncidence.reduce((a, c) => ((c.incidence ?? 0) > (a.incidence ?? 0) ? c : a));
+    const max = top.incidence!;
     incidence = 0.7 + 0.6 * clamp(max, 0, 1);
-    if (max >= 0.6) reasons.push({ code: "HIGH_INCIDENCE", text: `Alta incidência registrada para ${name} na prova.`, weight: 0.8 });
+    const s = top.incidenceSample;
+    const sample = !s
+      ? ""
+      : s.questions === 0
+        ? ` Não caiu nas ${s.subjectPapers} ${s.subjectPapers === 1 ? "prova oficial" : "provas oficiais"} de ${top.competitionName} no banco.`
+        : ` Caiu em ${s.questions} ${s.questions === 1 ? "questão" : "questões"}, em ${s.papers} de ${s.subjectPapers} ${s.subjectPapers === 1 ? "prova oficial" : "provas oficiais"} de ${top.competitionName}.`;
+    if (max >= 0.6) {
+      reasons.push({ code: "HIGH_INCIDENCE", text: `Alta incidência de ${name} na prova.${sample}`, weight: 0.5 + max * 0.5 });
+    } else if (max <= 0.3 && s) {
+      reasons.push({ code: "LOW_INCIDENCE", text: `${name} cai pouco na prova.${sample}`, weight: 0.3 });
+    }
   }
 
   /* review need */

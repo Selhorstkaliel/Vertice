@@ -1,5 +1,6 @@
 "use client";
 
+import { StageItems, type StageItemView } from "./stage-items";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -355,9 +356,10 @@ export interface StageView {
   status: keyof typeof STAGE_STATUS_LABEL;
   date: string | null;
   notes: string | null;
+  items?: StageItemView[];
 }
 
-export function StagesEditor({ enrollmentId, stages }: { enrollmentId: string; stages: StageView[] }) {
+export function StagesEditor({ enrollmentId, stages, today }: { enrollmentId: string; stages: StageView[]; today?: string }) {
   const [newStage, setNewStage] = React.useState("");
   const { pending, run } = useAction();
   return (
@@ -400,6 +402,7 @@ export function StagesEditor({ enrollmentId, stages }: { enrollmentId: string; s
                 <Trash2 />
               </Button>
             </div>
+            {s.items && today && <StageItems stageId={s.id} stageName={s.name} items={s.items} today={today} />}
           </li>
         ))}
       </ol>

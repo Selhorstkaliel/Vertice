@@ -4,9 +4,10 @@ import { Activity, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Notice, PageHeader } from "@/components/ui/display";
 import { StagesEditor } from "@/components/competitions/competition-controls";
-import { TafTestCard, TafTestDialog } from "@/components/military/taf-controls";
+import { TafSafetyNotice, TafTestCard, TafTestDialog } from "@/components/military/taf-controls";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { getMilitaryEnrollments, getTafTests, type MilitaryEnrollmentView } from "@/modules/military/service";
+import { syncStageItems } from "@/modules/military/stages";
 import { localNow } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,8 @@ export default async function MilitaryPage({ searchParams }: { searchParams: Pro
   const { aba } = await searchParams;
   const tab = aba === "taf" ? "taf" : "etapas";
   const today = localNow(user.profile.timezone).key;
-  const [enrollments, tests] = await Promise.all([getMilitaryEnrollments(user.id), tab === "taf" ? getTafTests(user.id) : Promise.resolve([])]);
+  if (tab === "etapas") await syncStageItems(user.id);
+  const [enrollments, tests] = await Promise.all([getMilitaryEnrollments(user.id), tab === "taf" ? getTafTests(user.id, today) : Promise.resolve([])]);
   const options = enrollments.map((e) => ({ id: e.id, title: e.title }));
 
   return (
@@ -83,7 +85,8 @@ export default async function MilitaryPage({ searchParams }: { searchParams: Pro
         ) : (
           <div className="flex flex-col gap-10">
             <Notice tone="warning" title="Confirme no edital oficial">
-              As etapas sugeridas são um modelo geral e cada concurso pode ter etapas diferentes. Ajuste nomes, ordem e datas conforme o edital; datas informadas aqui aparecem no calendário.
+              As etapas sugeridas são um modelo geral e cada concurso pode ter etapas diferentes. Ajuste nomes, ordem e datas conforme o edital. Em cada etapa, marque documentos, exames e
+              prazos já cumpridos; os prazos aparecem no calendário e geram lembretes 7, 3 e 1 dia antes.
             </Notice>
             {enrollments.map((e) => (
               <section key={e.id} aria-labelledby={`stages-${e.id}`} className="flex flex-col gap-4">
@@ -97,16 +100,14 @@ export default async function MilitaryPage({ searchParams }: { searchParams: Pro
                   </Link>
                 </div>
                 <StageSummary enrollment={e} today={today} />
-                <StagesEditor enrollmentId={e.id} stages={e.stages} />
+                <StagesEditor enrollmentId={e.id} stages={e.stages} today={today} />
               </section>
             ))}
           </div>
         )
       ) : (
         <div className="flex flex-col gap-8">
-          <Notice tone="neutral" title="Registro, não prescrição">
-            O Vértice organiza seus resultados e metas do TAF. Ele não recomenda treinos nem substitui avaliação médica e o acompanhamento de um profissional de educação física. Confirme os índices e o protocolo de cada prova no edital oficial.
-          </Notice>
+          <TafSafetyNotice />
           {tests.length === 0 ? (
             <EmptyState
               icon={<Activity />}

@@ -33,7 +33,15 @@ export default async function AttemptPage({ params }: { params: Promise<{ attemp
         figures: questionFigures(sq.question.figures),
         subjectName: sq.question.subject.name,
         options: sq.question.options,
+        generated: sq.question.source === "GENERATED",
       }))}
+      examNote={
+        attempt.simulation.examMode
+          ? attempt.simulation.scoringRule?.mode === "PENALTY"
+            ? `Cada erro anula ${attempt.simulation.scoringRule.wrongPenalty ?? 1} acerto(s). Na dúvida, deixar em branco não tira ponto. A resolução só aparece no final.`
+            : "Sem desconto por erro: em branco vale zero, igual a errar. A resolução só aparece no final."
+          : null
+      }
       initialAnswers={Object.fromEntries(attempt.answers.map((a) => [a.simulationQuestionId, { optionId: a.selectedOptionId, flagged: a.flagged }]))}
     />
   );

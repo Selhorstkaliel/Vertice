@@ -20,6 +20,7 @@ import {
 import { formatDateShort, formatMinutes, formatPercent } from "@/lib/format";
 import { TOPIC_STATUS_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { describeIncidence } from "@/engines/study/incidence";
 import type { SubjectNode, TopicNode } from "@/modules/syllabus/queries";
 import { setTopicStatusAction } from "@/modules/syllabus/actions";
 import { addTopicAction, removeSubjectAction, removeTopicAction, setSubjectWeightAction } from "@/modules/competitions/actions";
@@ -105,9 +106,15 @@ function TopicRow({
               <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
             </button>
           )}
-          <span className={cn("truncate text-base", node.isLeaf ? "text-fg" : "font-medium text-fg")}>{node.name}</span>
-          {node.owned && <Badge tone="outline">Seu</Badge>}
-          {due && <Badge tone="warning">Revisar</Badge>}
+          <div className="flex min-w-0 flex-col">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className={cn("truncate text-base", node.isLeaf ? "text-fg" : "font-medium text-fg")}>{node.name}</span>
+              {node.owned && <Badge tone="outline">Seu</Badge>}
+              {due && <Badge tone="warning">Revisar</Badge>}
+              {node.incidence?.incidence != null && node.incidence.incidence >= 0.6 && <Badge tone="performance">Cai muito</Badge>}
+            </span>
+            {node.incidence && <span className="truncate text-sm text-fg-subtle">{describeIncidence(node.incidence)}</span>}
+          </div>
         </div>
 
         {/* Mobile summary */}

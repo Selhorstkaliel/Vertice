@@ -55,11 +55,12 @@ interface TestForm {
   distance: string;
   target: string;
   enrollmentId: string;
+  testDate: string;
   notes: string;
 }
 
 function toForm(test?: TafTestView): TestForm {
-  if (!test) return { name: "Corrida", modality: "RUN", unit: "SECONDS", betterWhen: "LOWER", distance: "2400", target: "", enrollmentId: "", notes: "" };
+  if (!test) return { name: "Corrida", modality: "RUN", unit: "SECONDS", betterWhen: "LOWER", distance: "2400", target: "", enrollmentId: "", testDate: "", notes: "" };
   return {
     name: test.name,
     modality: test.modality,
@@ -68,6 +69,7 @@ function toForm(test?: TafTestView): TestForm {
     distance: test.distanceMeters ? String(test.distanceMeters) : "",
     target: test.targetValue !== null ? (test.unit === "SECONDS" ? formatMeasure(test.targetValue, "SECONDS") : String(test.targetValue)) : "",
     enrollmentId: test.enrollmentId ?? "",
+    testDate: test.testDateSource === "TEST" && test.testDate ? test.testDate : "",
     notes: test.notes ?? "",
   };
 }
@@ -96,6 +98,7 @@ export function TafTestDialog({ test, enrollments, trigger }: { test?: TafTestVi
       distanceMeters: distance,
       target: v.target,
       enrollmentId: v.enrollmentId || null,
+      testDate: v.testDate || null,
       notes: v.notes,
     };
     startTransition(async () => {
@@ -209,6 +212,9 @@ export function TafTestDialog({ test, enrollments, trigger }: { test?: TafTestVi
               </NativeSelect>
             </Field>
           )}
+          <Field label="Data do TAF" htmlFor="taf-date" optional error={errors.testDate} hint="Sem data aqui, vale a data da etapa de TAF do concurso.">
+            <Input type="date" value={v.testDate} onChange={(e) => set("testDate", e.target.value)} />
+          </Field>
           <Field label="Observações" htmlFor="taf-notes" optional error={errors.notes}>
             <Textarea rows={2} value={v.notes} onChange={(e) => set("notes", e.target.value)} maxLength={500} />
           </Field>
@@ -367,7 +373,7 @@ export function TafTestCard({ test, enrollments, today }: { test: TafTestView; e
         <div className="flex flex-col gap-0.5">
           <dt className="text-sm text-fg-subtle">Meta</dt>
           <dd className="numeral text-xl font-light text-fg">{test.targetValue !== null ? unitLabel(test.targetValue) : "—"}</dd>
-          <dd className="text-sm text-fg-subtle">{test.targetValue !== null ? "Definida por você" : "Sem meta"}</dd>
+          <dd className="text-sm text-fg-subtle">{test.targetValue !== null ? "Informada por você, não verificada" : "Sem meta"}</dd>
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-sm text-fg-subtle">Melhor marca</dt>
@@ -398,6 +404,8 @@ export function TafTestCard({ test, enrollments, today }: { test: TafTestView; e
         <p className="text-sm text-fg-subtle">{test.results.length === 0 ? "Registre o primeiro resultado para acompanhar a evolução." : "O gráfico de evolução aparece a partir do segundo registro."}</p>
       )}
 
+      <TafProgression test={test} />
+
       <ResultForm test={test} today={today} />
 
       {test.results.length > 0 && (
@@ -415,5 +423,67 @@ export function TafTestCard({ test, enrollments, today }: { test: TafTestView; e
         </details>
       )}
     </article>
+  );
+}
+
+/** Fixed, always visible on the TAF tab. */
+export function TafSafetyNotice() {
+  return (
+    <Notice tone="warning" title="Sugestão geral, não prescrição">
+      A progressão sugerida aqui é geral e não substitui um profissional de educação física nem um médico. Menores de idade devem treinar com acompanhamento de um adulto
+      responsável e de um profissional. Em caso de dor, pare e procure orientação. Confirme os índices e o protocolo de cada prova no edital oficial: os índices desta tela
+      são informados por você e não são verificados.
+    </Notice>
+  );
+}
+
+const WEEK_KIND_LABEL = { BUILD: "Progressão", DELOAD: "Alívio", TAPER: "Véspera: manter e descansar" } as const;
+
+function TafProgression({ test }: { test: TafTestView }) {
+  const p = test.progression;
+  const fmt = (v: number) => formatMeasure(v, test.unit);
+  const dateNote = test.testDate ? `TAF em ${dateBr(test.testDate)}${test.testDateSource === "STAGE" ? " (data da etapa)" : ""}` : null;
+  const message: Record<typeof p.status, string> = {
+    NEED_BASELINE: "Registre um resultado atual para receber uma sugestão de progressão.",
+    NEED_TARGET: "Informe a meta (o índice do edital) para calcular a progressão.",
+    TARGET_MET: "Seu último resultado já atinge a meta. Mantenha a frequência e registre novos testes.",
+    NEED_DATE: `Informe a data do TAF (na prova ou na etapa do concurso). No ritmo seguro, seriam cerca de ${p.buildWeeksNeeded ?? "?"} semanas de progressão, mais semanas de alívio.`,
+    TEST_PASSED: "A data do TAF já passou. Atualize a data para planejar a próxima.",
+    ON_TRACK: `${dateNote}. No ritmo seguro, dá para chegar à meta: ${p.weeksLeft} semanas, com alívio a cada 4 e reavaliação a cada 3.`,
+    TOO_SHORT: `${dateNote}. O prazo é curto para chegar à meta com segurança: no ritmo seguro, a projeção é ${p.projected !== null ? fmt(p.projected) : "—"}, e seriam necessárias cerca de ${p.buildWeeksNeeded} semanas de progressão. A sugestão não acelera o treino para compensar; converse com um profissional sobre o que é viável.`,
+  };
+  return (
+    <section aria-label={`Progressão sugerida para ${test.name}`} className="flex flex-col gap-2">
+      <h4 className="text-base font-medium text-fg">Progressão sugerida</h4>
+      <p className={cn("text-sm", p.status === "TOO_SHORT" ? "text-warning" : "text-fg-muted")}>{message[p.status]}</p>
+      {p.weeks.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-fg-subtle select-none hover:text-fg">Semana a semana ({p.weeks.length})</summary>
+          <table className="mt-2 w-full max-w-xl text-left">
+            <thead>
+              <tr className="text-fg-subtle">
+                <th className="pb-1 font-normal">Semana</th>
+                <th className="pb-1 font-normal">Início</th>
+                <th className="pb-1 font-normal">Tipo</th>
+                <th className="pb-1 text-right font-normal">Objetivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {p.weeks.map((w) => (
+                <tr key={w.index} className="border-t border-line-soft">
+                  <td className="numeral py-1 text-fg-muted">{w.index}</td>
+                  <td className="py-1 text-fg-muted">{dateBr(w.weekStart)}</td>
+                  <td className="py-1 text-fg-muted">
+                    {WEEK_KIND_LABEL[w.kind]}
+                    {w.reassess ? ", refazer o teste" : ""}
+                  </td>
+                  <td className="numeral py-1 text-right text-fg">{fmt(w.goal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
+    </section>
   );
 }

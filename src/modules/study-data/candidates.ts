@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { dbDateToKey, diffDays, toDateKey, type DateKey } from "@/lib/time";
 import type { TopicCandidate } from "@/engines/study/priority";
 import { effectiveExamDate, weightShares } from "@/modules/competitions/queries";
+import { getOfficialIncidence } from "@/modules/competitions/incidence";
 
 export interface StudyContext {
   enrollments: {
@@ -83,13 +84,14 @@ export async function loadStudyContext(userId: string, tz: string, today: DateKe
   const leafIds = leaves.map((t) => t.id);
 
   const since = new Date(Date.now() - 30 * 86_400_000);
-  const [progress, errors] = await Promise.all([
+  const [progress, errors, official] = await Promise.all([
     db.topicProgress.findMany({ where: { userId, topicId: { in: leafIds } } }),
     db.errorEntry.groupBy({
       by: ["topicId"],
       where: { userId, createdAt: { gte: since }, topicId: { in: leafIds }, resolvedAt: null },
       _count: { _all: true },
     }),
+    getOfficialIncidence(enrollments.map((e) => e.competitionId)),
   ]);
   const progressByTopic = new Map(progress.map((p) => [p.topicId, p]));
   const errorsByTopic = new Map(errors.map((e) => [e.topicId, e._count._all]));
@@ -100,6 +102,18 @@ export async function loadStudyContext(userId: string, tz: string, today: DateKe
     enrollments.map((e) => [e.competitionId, new Map(e.competition.topics.map((t) => [t.topicId, t.incidence]))]),
   );
 
+  // Official papers come first; a value registered on the edital is the fallback.
+  const incidenceFor = (competitionId: string, topicId: string) => {
+    const measured = official.get(competitionId)?.byTopic.get(topicId);
+    if (measured && measured.incidence !== null) {
+      return {
+        incidence: measured.incidence,
+        incidenceSample: { questions: measured.questions, papers: measured.papers, subjectPapers: measured.subjectPapers },
+      };
+    }
+    return { incidence: incidenceByCompetition.get(competitionId)?.get(topicId) ?? null, incidenceSample: null };
+  };
+
   const candidates: TopicCandidate[] = leaves.map((t) => {
     const p = progressByTopic.get(t.id);
     const links = enrollmentInfo
@@ -109,7 +123,7 @@ export async function loadStudyContext(userId: string, tz: string, today: DateKe
         competitionName: e.competitionName,
         isPrimary: e.isPrimary,
         weightShare: sharesByCompetition.get(e.competitionId)?.get(t.subjectId) ?? null,
-        incidence: incidenceByCompetition.get(e.competitionId)?.get(t.id) ?? null,
+        ...incidenceFor(e.competitionId, t.id),
         daysToExam: e.daysToExam,
       }));
     return {

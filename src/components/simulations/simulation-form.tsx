@@ -12,13 +12,22 @@ import { createSimulationAction } from "@/modules/simulations/actions";
 
 type Option = { id: string; name: string };
 
+export interface CompetitionRuleInfo {
+  mode: "RIGHT_COUNT" | "PENALTY";
+  wrongPenalty: number | null;
+  durationMinutes: number | null;
+  officialQuestions: number | null;
+  verified: boolean;
+  year: number | null;
+}
+
 export function SimulationForm({
   competitions,
   boards,
   subjects,
   defaults,
 }: {
-  competitions: (Option & { subjectIds: string[] })[];
+  competitions: (Option & { subjectIds: string[]; rule: CompetitionRuleInfo | null })[];
   boards: Option[];
   subjects: (Option & { available: number })[];
   defaults: { competitionId: string | null };
@@ -35,6 +44,8 @@ export function SimulationForm({
   const [minutes, setMinutes] = React.useState("60");
   const [timed, setTimed] = React.useState(true);
   const [preferUnanswered, setPreferUnanswered] = React.useState(true);
+  const [examMode, setExamMode] = React.useState(false);
+  const rule = competitions.find((c) => c.id === competitionId)?.rule ?? null;
   const [errors, setErrors] = React.useState<Record<string, string[] | undefined>>({});
   const [message, setMessage] = React.useState<string | null>(null);
   const [pending, startTransition] = React.useTransition();
@@ -43,6 +54,7 @@ export function SimulationForm({
 
   const pickCompetition = (id: string) => {
     setCompetitionId(id);
+    if (!id) setExamMode(false);
     const c = competitions.find((x) => x.id === id);
     if (c) {
       setSubjectIds(subjects.filter((s) => c.subjectIds.includes(s.id)).map((s) => s.id));
@@ -63,8 +75,9 @@ export function SimulationForm({
             subjectIds,
             difficulty: (difficulty || null) as "EASY" | "MEDIUM" | "HARD" | null,
             questionCount: Number(count),
-            timeLimitMinutes: timed ? Number(minutes) : null,
+            timeLimitMinutes: timed || (examMode && !rule?.durationMinutes) ? Number(minutes) : null,
             preferUnanswered,
+            examMode,
           });
           if (r && !r.ok) {
             setErrors(r.fieldErrors ?? {});
@@ -142,16 +155,43 @@ export function SimulationForm({
         {errors.subjectIds && <p className="text-sm text-danger">{errors.subjectIds[0]}</p>}
       </fieldset>
 
+      {competitionId && (
+        <div className="flex flex-col gap-2 rounded-[var(--radius-panel)] bg-surface px-4 py-4">
+          <div className="flex items-start gap-2.5">
+            <Checkbox id="sim-exam" checked={examMode} onCheckedChange={(v) => setExamMode(v === true)} className="mt-0.5" />
+            <Label htmlFor="sim-exam" className="flex flex-col gap-0.5 text-base text-fg">
+              Modo prova
+              <span className="text-sm font-normal text-fg-subtle">
+                Número de questões e tempo do edital, nota pela regra do concurso, resolução só no final e opção de deixar em branco.
+              </span>
+            </Label>
+          </div>
+          <p className="text-sm text-fg-subtle">
+            {rule
+              ? `Regra ${rule.year ?? ""}: ${rule.mode === "PENALTY" ? `cada erro anula ${rule.wrongPenalty ?? 1} acerto(s)` : "acertos, sem desconto"}${rule.durationMinutes ? `, ${rule.durationMinutes} min` : ", tempo não cadastrado"}${rule.officialQuestions ? `, ${rule.officialQuestions} questões` : ""}.${rule.verified ? "" : " Informação não verificada."}`
+              : "Este concurso ainda não tem regra de pontuação cadastrada: a nota será por acertos, e o tempo é o que você informar."}
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Quantidade de questões" htmlFor="sim-count" error={errors.questionCount}>
-          <Input type="number" inputMode="numeric" min={3} max={120} value={count} onChange={(e) => setCount(e.target.value)} />
+          <Input type="number" inputMode="numeric" min={3} max={120} value={examMode && rule?.officialQuestions ? String(Math.min(120, rule.officialQuestions)) : count} disabled={examMode && !!rule?.officialQuestions} onChange={(e) => setCount(e.target.value)} />
         </Field>
         <Field label="Tempo (minutos)" htmlFor="sim-minutes" error={errors.timeLimitMinutes}>
-          <Input type="number" inputMode="numeric" min={5} max={600} value={minutes} disabled={!timed} onChange={(e) => setMinutes(e.target.value)} />
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={5}
+            max={600}
+            value={examMode && rule?.durationMinutes ? String(rule.durationMinutes) : minutes}
+            disabled={examMode ? !!rule?.durationMinutes : !timed}
+            onChange={(e) => setMinutes(e.target.value)}
+          />
         </Field>
         <div className="flex items-end pb-2.5">
           <div className="flex items-center gap-2.5">
-            <Checkbox id="sim-timed" checked={timed} onCheckedChange={(v) => setTimed(v === true)} />
+            <Checkbox id="sim-timed" checked={timed || examMode} disabled={examMode} onCheckedChange={(v) => setTimed(v === true)} />
             <Label htmlFor="sim-timed" className="text-base text-fg">
               Com tempo limite
             </Label>

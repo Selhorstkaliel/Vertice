@@ -16,7 +16,14 @@ import {
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { competitionTitle, getCompetitionForUser, listExamBoards } from "@/modules/competitions/queries";
 import { COMPETITION_KIND_LABEL, COMPETITION_STATUS_LABEL, VERIFICATION_LABEL } from "@/lib/labels";
-import { formatCalendarDate } from "@/lib/format";
+import { formatCalendarDate, formatPercent } from "@/lib/format";
+import { db } from "@/lib/db";
+import { describeIncidence } from "@/engines/study/incidence";
+import { getOfficialIncidence, incidenceBasis } from "@/modules/competitions/incidence";
+import { syncStageItems } from "@/modules/military/stages";
+import { stageItemView } from "@/modules/military/service";
+import { localNow } from "@/lib/time";
+import { UseOfficialDateButton } from "@/components/competitions/official-date";
 import { dbDateToKey } from "@/lib/time";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -29,12 +36,25 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function CompetitionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireOnboardedUser();
   const { id } = await params;
+  await syncStageItems(user.id);
   const c = await getCompetitionForUser(user.id, id);
   if (!c) notFound();
   const enrollment = c.enrollments[0] ?? null;
   const owned = c.ownerId === user.id;
   const boards = owned ? await listExamBoards() : [];
   const examDate = c.examDate ?? enrollment?.customExamDate ?? null;
+  const official = (await getOfficialIncidence([c.id])).get(c.id) ?? null;
+  const topIncidence = official
+    ? [...official.byTopic.values()].filter((t) => t.questions > 0).sort((a, b) => b.questions - a.questions || b.papers - a.papers).slice(0, 12)
+    : [];
+  const topicNames = topIncidence.length
+    ? new Map(
+        (await db.topic.findMany({ where: { id: { in: topIncidence.map((t) => t.topicId) } }, select: { id: true, name: true, subject: { select: { name: true } } } })).map((t) => [
+          t.id,
+          t,
+        ]),
+      )
+    : new Map();
 
   return (
     <div className="flex flex-col gap-10">
@@ -65,6 +85,13 @@ export default async function CompetitionDetailPage({ params }: { params: Promis
         {enrollment?.isPrimary && <Badge tone="performance">Principal</Badge>}
         {c.forkedFrom && <Badge tone="outline">Personalizado a partir de {c.forkedFrom.name}</Badge>}
       </div>
+
+      {enrollment?.keepCustomExamDate && c.examDate && enrollment.customExamDate && (
+        <Notice tone="info" title="Data oficial da prova publicada" action={<UseOfficialDateButton competitionId={c.id} />}>
+          O edital marca a prova para {formatCalendarDate(c.examDate)}. Você informou {formatCalendarDate(enrollment.customExamDate)}, e essa data continua valendo no seu plano até você
+          escolher a oficial.
+        </Notice>
+      )}
 
       {c.verification === "UNVERIFIED" && (
         <Notice tone="warning" title="Informação não verificada">
@@ -156,6 +183,51 @@ export default async function CompetitionDetailPage({ params }: { params: Promis
         </section>
       </div>
 
+      <section aria-labelledby="incidence-title" className="flex flex-col gap-4">
+        <SectionTitle>
+          <span id="incidence-title">O que mais cai</span>
+        </SectionTitle>
+        {official && official.papers > 0 ? (
+          <>
+            <p className="-mt-2 max-w-2xl text-base text-fg-muted">
+              {incidenceBasis(official)}, {official.questions} questões. Só questões de provas oficiais entram na conta; as geradas por IA ficam de fora. Com poucas provas, a
+              incidência é puxada para a média para não supervalorizar um tópico que caiu uma vez.
+            </p>
+            {topIncidence.length === 0 ? (
+              <p className="text-base text-fg-muted">As questões oficiais ainda não estão classificadas por tópico.</p>
+            ) : (
+              <table className="w-full max-w-3xl text-left">
+                <caption className="sr-only">Tópicos com mais questões nas provas oficiais</caption>
+                <thead>
+                  <tr className="text-sm text-fg-subtle">
+                    <th className="pb-2 font-normal">Tópico</th>
+                    <th className="pb-2 font-normal">Nas provas</th>
+                    <th className="pb-2 text-right font-normal">Fatia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topIncidence.map((t) => {
+                    const topic = topicNames.get(t.topicId);
+                    return (
+                      <tr key={t.topicId} className="border-t border-line-soft">
+                        <td className="py-2.5 pr-4 text-base text-fg">
+                          {topic?.name ?? "—"}
+                          <span className="block text-sm text-fg-subtle">{topic?.subject.name}</span>
+                        </td>
+                        <td className="py-2.5 pr-4 text-sm text-fg-muted">{describeIncidence(t)}</td>
+                        <td className="numeral py-2.5 text-right text-base text-fg-muted">{formatPercent(t.share, 1)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </>
+        ) : (
+          <p className="max-w-2xl text-base text-fg-muted">Ainda não há provas oficiais deste concurso no banco de questões. Sem elas, a incidência fica neutra no plano.</p>
+        )}
+      </section>
+
       {enrollment && (
         <>
           <section aria-labelledby="enroll-title" className="flex max-w-2xl flex-col gap-4">
@@ -180,7 +252,8 @@ export default async function CompetitionDetailPage({ params }: { params: Promis
             </p>
             <StagesEditor
               enrollmentId={enrollment.id}
-              stages={enrollment.stages.map((s) => ({ id: s.id, name: s.name, status: s.status, date: s.date ? dbDateToKey(s.date) : null, notes: s.notes }))}
+              stages={enrollment.stages.map((s) => ({ id: s.id, name: s.name, status: s.status, date: s.date ? dbDateToKey(s.date) : null, notes: s.notes, items: s.items.map(stageItemView) }))}
+              today={localNow(user.profile.timezone).key}
             />
           </section>
 

@@ -20,7 +20,7 @@ const RATINGS: { rating: Rating; key: string; tone: string }[] = [
   { rating: "EASY", key: "4", tone: "hover:shadow-[inset_0_0_0_1px_var(--positive)] [&_.label]:text-positive" },
 ];
 
-export function ReviewSession({ cards }: { cards: QueueCard[] }) {
+export function ReviewSession({ cards, onFinish }: { cards: QueueCard[]; /** Inside a sequence (daily mission): replaces the end screen. */ onFinish?: () => void }) {
   const [index, setIndex] = React.useState(0);
   const [revealed, setRevealed] = React.useState(false);
   const [counts, setCounts] = React.useState<Record<Rating, number>>({ AGAIN: 0, HARD: 0, GOOD: 0, EASY: 0 });
@@ -73,6 +73,21 @@ export function ReviewSession({ cards }: { cards: QueueCard[] }) {
         <p className="text-base text-fg-muted">As próximas revisões aparecem aqui quando chegar a data calculada para cada cartão.</p>
         <Button asChild variant="secondary">
           <Link href="/flashcards">Voltar aos flashcards</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (done && onFinish) {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    return (
+      <div className="flex flex-col items-start gap-4 py-6">
+        <h2 className="text-xl font-semibold tracking-[-0.02em]">Flashcards concluídos</h2>
+        <p className="text-base text-fg-muted">
+          {total} {total === 1 ? "cartão revisado" : "cartões revisados"} em {formatTimer((Date.now() - sessionStart.current) / 1000)}.
+        </p>
+        <Button variant="primary" onClick={onFinish}>
+          Continuar a missão
         </Button>
       </div>
     );

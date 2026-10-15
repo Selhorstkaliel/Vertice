@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import { fileExists, loadFile, saveFile } from "@/lib/storage";
+import { fileExists, loadFile, saveFile, type StorageKind } from "@/lib/storage";
 import type { Box } from "@/engines/questions/rich-text";
 import { refineBox } from "@/engines/questions/figure-box";
 
@@ -60,16 +60,16 @@ function resolveFromModule() {
   }
 }
 
-async function openPdf(file: string) {
+async function openPdf(file: string, kind: StorageKind = "provas") {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const data = new Uint8Array(await loadFile("provas", file));
+  const data = new Uint8Array(await loadFile(kind, file));
   const task = pdfjs.getDocument({ data, verbosity: 0, wasmUrl: wasmDir() });
   const doc = await task.promise;
   return Object.assign(doc, { close: () => task.destroy() });
 }
 
-export async function pdfPageCount(file: string) {
-  const doc = await openPdf(file);
+export async function pdfPageCount(file: string, kind: StorageKind = "provas") {
+  const doc = await openPdf(file, kind);
   try {
     return doc.numPages;
   } finally {
@@ -78,8 +78,8 @@ export async function pdfPageCount(file: string) {
 }
 
 /** Text layer per page (index 0 = page 1). Scanned exams have OCR text, which may be imperfect or empty. */
-export async function pdfPageTexts(file: string) {
-  const doc = await openPdf(file);
+export async function pdfPageTexts(file: string, kind: StorageKind = "provas") {
+  const doc = await openPdf(file, kind);
   try {
     const texts: string[] = [];
     for (let n = 1; n <= doc.numPages; n++) {

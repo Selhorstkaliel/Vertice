@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CalendarCheck2, Flag } from "lucide-react";
+import { CalendarCheck2, Check, Crosshair, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, Notice, Progress, SectionTitle } from "@/components/ui/display";
 import { CountdownBand } from "@/components/dashboard/countdown-band";
@@ -9,6 +9,7 @@ import { PlanItemRow } from "@/components/plan/plan-item-row";
 import { GeneratePlanButton } from "@/components/plan/plan-controls";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { getDashboard } from "@/modules/dashboard/queries";
+import { sourceAlerts } from "@/modules/editais/queries";
 import { listGoals } from "@/modules/goals/service";
 import { goalTitle } from "@/modules/goals/format";
 import { GoalProgress } from "@/components/goals/goal-row";
@@ -58,7 +59,8 @@ function Reading({
 
 export default async function DashboardPage() {
   const user = await requireOnboardedUser();
-  const [data, goals] = await Promise.all([getDashboard(user), listGoals(user.id, user.profile.timezone)]);
+  const [data, goals, editalAlerts] = await Promise.all([getDashboard(user), listGoals(user.id, user.profile.timezone), user.isAdmin ? sourceAlerts() : Promise.resolve(null)]);
+  const brokenSources = editalAlerts?.failing.filter((s) => s.needsAttention).length ?? 0;
   const activeGoals = goals.filter((g) => g.isActive).slice(0, 4);
   const m = data.metrics;
   const weekGoal = m.weeklyTargetMinutes;
@@ -69,6 +71,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-10">
+      {editalAlerts && (brokenSources > 0 || editalAlerts.failedReads > 0) && (
+        <Notice tone="warning" title="Busca de editais precisa de atenção" action={<Button asChild size="sm"><Link href="/admin/editais">Abrir editais</Link></Button>}>
+          {brokenSources > 0 ? `${brokenSources} ${brokenSources === 1 ? "fonte falhou" : "fontes falharam"} várias vezes seguidas. ` : ""}
+          {editalAlerts.failedReads > 0 ? `${editalAlerts.failedReads} ${editalAlerts.failedReads === 1 ? "leitura falhou" : "leituras falharam"}.` : ""}
+        </Notice>
+      )}
       <header className="flex flex-col gap-8 max-lg:order-1">
         <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl sm:leading-tight">
           {greeting(data.hour)}, {firstName(user.name)}.
@@ -80,6 +88,15 @@ export default async function DashboardPage() {
             O plano, a prioridade do dia e o índice de preparação dependem do concurso principal.
           </Notice>
         )}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-panel)] bg-surface px-5 py-4">
+          <p className="flex items-center gap-3 text-md text-fg">
+            {data.mission.completed ? <Check className="size-5 text-positive" aria-hidden="true" /> : <Crosshair className="size-5 text-performance" aria-hidden="true" />}
+            {data.mission.completed ? "Missão de hoje cumprida" : `Missão de hoje: ${data.mission.estMinutes} min`}
+          </p>
+          <Button asChild size="sm" variant={data.mission.completed ? "ghost" : "primary"}>
+            <Link href="/missao">{data.mission.completed ? "Ver missão" : "Começar"}</Link>
+          </Button>
+        </div>
       </header>
 
       {/* Instrument row — readings, not cards */}

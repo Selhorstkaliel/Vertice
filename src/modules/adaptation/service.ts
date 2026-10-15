@@ -15,6 +15,9 @@ import { notify, type NewNotification } from "@/modules/notifications/service";
 import { listGoals, recordGoalCompletions } from "@/modules/goals/service";
 import { getProgress } from "@/modules/progress/service";
 import { goalTitle } from "@/modules/goals/format";
+import { generateStageReminders } from "@/modules/military/stages";
+import { generateEssayNotices } from "@/modules/essays/service";
+import { essaysEnabled } from "@/lib/plan-limits";
 
 /*
  * Daily adaptive pass (§27, §34, §48). Everything here is idempotent: learned
@@ -215,11 +218,16 @@ export async function runDailyAdaptation(userId: string) {
   if (now - (lastRun.get(userId) ?? 0) < MIN_INTERVAL_MS) return;
   lastRun.set(userId, now);
 
-  const profile = await db.profile.findUnique({ where: { userId }, select: { timezone: true, weeklyHoursTarget: true, energyLearning: true } });
+  const profile = await db.profile.findUnique({
+    where: { userId },
+    select: { timezone: true, weeklyHoursTarget: true, energyLearning: true, dailyStudyLimitMin: true, user: { select: { isAdmin: true } } },
+  });
   if (!profile) return;
   if (profile.energyLearning) await updateLearnedEnergy(userId, profile.timezone);
   await proposeRealisticGoal(userId, profile.timezone, profile.weeklyHoursTarget);
   await generateNotifications(userId, profile.timezone, profile.weeklyHoursTarget);
+  await generateStageReminders(userId, profile.timezone);
+  if (essaysEnabled(profile.user)) await generateEssayNotices({ id: userId, profile });
   // Stamps personal milestones close to when they were reached.
   await getProgress(userId, profile.timezone);
 }

@@ -9,6 +9,7 @@ import { competitionTitle, effectiveExamDate } from "@/modules/competitions/quer
 import { formatMeasure } from "@/engines/military/taf";
 import { listGoals } from "@/modules/goals/service";
 import { formatGoalValue, goalTitle } from "@/modules/goals/format";
+import { STAGE_ITEM_KIND_LABEL } from "@/lib/labels";
 
 /*
  * One read model for the calendar (§47). Only custom events are stored as
@@ -62,11 +63,11 @@ export async function getCalendarItems(userId: string, tz: string, from: DateKey
     today >= from && today < to ? db.topicProgress.count({ where: { userId, nextReviewAt: { lt: zonedToUtc(today, 0, tz) } } }) : Promise.resolve(0),
     db.studentCompetition.findMany({
       where: { userId, status: { not: "ARCHIVED" } },
-      select: { competitionId: true, customExamDate: true, competition: { select: { name: true, year: true, examDate: true, verification: true } } },
+      select: { competitionId: true, customExamDate: true, keepCustomExamDate: true, competition: { select: { name: true, year: true, examDate: true, verification: true } } },
     }),
     db.studentStage.findMany({
       where: { enrollment: { userId, status: { not: "ARCHIVED" } }, date: dateRange },
-      select: { id: true, name: true, date: true, status: true, enrollment: { select: { customExamDate: true, competition: { select: { id: true, kind: true, name: true, year: true, examDate: true } } } } },
+      select: { id: true, name: true, date: true, status: true, enrollment: { select: { customExamDate: true, keepCustomExamDate: true, competition: { select: { id: true, kind: true, name: true, year: true, examDate: true } } } } },
     }),
     db.simulationAttempt.findMany({
       where: { userId, status: { in: ["FINISHED", "EXPIRED"] }, finishedAt: range },
@@ -75,6 +76,19 @@ export async function getCalendarItems(userId: string, tz: string, from: DateKey
     db.militaryTestResult.findMany({ where: { userId, recordedAt: dateRange }, select: { id: true, recordedAt: true, value: true, test: { select: { name: true, unit: true } } } }),
     db.calendarEvent.findMany({ where: { userId, startsAt: range }, orderBy: { startsAt: "asc" } }),
   ]);
+  const stageItems = await db.studentStageItem.findMany({
+    where: { dueDate: dateRange, stage: { enrollment: { userId, status: { not: "ARCHIVED" } } } },
+    select: {
+      id: true,
+      title: true,
+      kind: true,
+      dueDate: true,
+      doneAt: true,
+      verification: true,
+      dateFromCatalog: true,
+      stage: { select: { name: true, enrollment: { select: { competitionId: true, competition: { select: { name: true, kind: true } } } } } },
+    },
+  });
 
   const items: CalendarItem[] = [];
 
@@ -147,6 +161,22 @@ export async function getCalendarItems(userId: string, tz: string, from: DateKey
       endMinute: null,
       href: c.kind === "MILITARY" ? "/militar" : `/concursos/${c.id}`,
       done: s.status === "PASSED" || s.status === "FAILED" || s.status === "NOT_APPLICABLE",
+      event: null,
+    });
+  }
+
+  for (const i of stageItems) {
+    const c = i.stage.enrollment.competition;
+    items.push({
+      id: `stage-item:${i.id}`,
+      type: i.kind === "REGISTRATION_DEADLINE" ? "REGISTRATION" : "CUSTOM",
+      title: `Prazo: ${i.title}`,
+      detail: `${c.name}, ${i.stage.name} (${STAGE_ITEM_KIND_LABEL[i.kind].toLowerCase()})${i.dateFromCatalog && i.verification !== "VERIFIED" ? ". Informação não verificada" : !i.dateFromCatalog ? ". Data informada por você" : ""}`,
+      dateKey: dbDateToKey(i.dueDate!),
+      startMinute: null,
+      endMinute: null,
+      href: c.kind === "MILITARY" ? "/militar" : `/concursos/${i.stage.enrollment.competitionId}`,
+      done: !!i.doneAt,
       event: null,
     });
   }

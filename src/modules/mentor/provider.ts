@@ -1,5 +1,5 @@
 import "server-only";
-import { env } from "@/lib/env";
+import { env, isProduction } from "@/lib/env";
 
 export type MentorProviderId = "anthropic" | "gemini" | "openai-compatible";
 
@@ -23,7 +23,8 @@ export function mentorProvider(): MentorProvider {
         id: "gemini",
         label: "Google (Gemini)",
         model: env.MENTOR_MODEL ?? "gemini-3.5-flash-lite",
-        configured: !!env.GEMINI_API_KEY,
+        // Student data never goes to the Gemini free tier in production.
+        configured: !!env.GEMINI_API_KEY && (!isProduction || env.GEMINI_PAID_TIER === "on"),
         baseUrl: env.MENTOR_BASE_URL ?? GEMINI_OPENAI_BASE,
         apiKey: env.GEMINI_API_KEY ?? null,
       };
@@ -43,7 +44,8 @@ export function mentorProvider(): MentorProvider {
       return {
         id: "anthropic",
         label: "Anthropic",
-        model: env.MENTOR_MODEL ?? "claude-opus-5",
+        // Cheapest Claude model that passes `npm run mentor:check`; override with MENTOR_MODEL.
+        model: env.MENTOR_MODEL ?? "claude-sonnet-5-5",
         configured: !!env.ANTHROPIC_API_KEY,
         baseUrl: null,
         apiKey: env.ANTHROPIC_API_KEY ?? null,

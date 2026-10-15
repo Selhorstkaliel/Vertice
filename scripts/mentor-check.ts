@@ -17,15 +17,12 @@ import { isoWeekdayOfKey, localNow } from "@/lib/time";
 import { buildMentorRequest, describeMentorError, getMentorClient, isFallbackRejection, mentorFallbacksActive, MentorProviderError, runMentorTurn } from "@/modules/mentor/llm";
 import { mentorProvider } from "@/modules/mentor/provider";
 import { compatRequest } from "@/modules/mentor/providers/openai-compatible";
+import { estimateCostUsd } from "@/modules/ai/usage";
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const EMAIL = arg("email") ?? "demo@vertice.app";
 const QUESTION = arg("pergunta") ?? "Onde estou perdendo mais pontos e o que devo priorizar nesta semana? Seja breve.";
 
-/** USD per million tokens. Only models with confirmed prices get a cost estimate. */
-const PRICES: Record<string, { input: number; output: number }> = {
-  "claude-opus-5": { input: 5, output: 25 },
-};
 
 let failures = 0;
 const check = (label: string, cond: boolean, extra = "") => {
@@ -36,9 +33,8 @@ const check = (label: string, cond: boolean, extra = "") => {
 function cost(model: string, u: { input: number; output: number; cacheRead: number; cacheWrite: number }) {
   const provider = mentorProvider();
   if (provider.id === "gemini") return "sem custo dentro dos limites do plano gratuito do Gemini";
-  const p = PRICES[model];
-  if (!p) return "preço deste modelo não cadastrado no script";
-  const usd = (u.input * p.input + u.cacheWrite * p.input * 1.25 + u.cacheRead * p.input * 0.1 + u.output * p.output) / 1_000_000;
+  const usd = estimateCostUsd(model, u);
+  if (usd === null) return "preço deste modelo não cadastrado em src/modules/ai/usage.ts";
   return `≈ US$ ${usd.toFixed(3)}`;
 }
 

@@ -14,8 +14,11 @@ export function visibleSubject(userId: string): Prisma.SubjectWhereInput {
 
 export function effectiveExamDate(enrollment: {
   customExamDate: Date | null;
+  /** The student chose to keep their own date after an official one was published. */
+  keepCustomExamDate?: boolean;
   competition: { examDate: Date | null };
 }): { date: Date | null; official: boolean } {
+  if (enrollment.keepCustomExamDate && enrollment.customExamDate) return { date: enrollment.customExamDate, official: false };
   if (enrollment.competition.examDate) return { date: enrollment.competition.examDate, official: true };
   return { date: enrollment.customExamDate, official: false };
 }
@@ -128,7 +131,7 @@ export async function getCompetitionForUser(userId: string, competitionId: strin
         include: { subject: { select: { id: true, name: true, area: true, ownerId: true } } },
         orderBy: { order: "asc" },
       },
-      enrollments: { where: { userId }, include: { stages: { orderBy: { order: "asc" } } } },
+      enrollments: { where: { userId }, include: { stages: { orderBy: { order: "asc" }, include: { items: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] } } } } },
       forkedFrom: { select: { id: true, name: true } },
       _count: { select: { topics: true } },
     },

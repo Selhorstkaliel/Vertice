@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/display";
 import { SimulationForm } from "@/components/simulations/simulation-form";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { db } from "@/lib/db";
+import { officialQuestionCount, ruleForCompetition } from "@/modules/scoring/service";
 
 export const metadata: Metadata = { title: "Novo simulado" };
 
@@ -12,7 +13,7 @@ export default async function NewSimulationPage() {
   const [enrollments, boards, counts, subjects] = await Promise.all([
     db.studentCompetition.findMany({
       where: { userId: user.id, status: "ACTIVE" },
-      select: { isPrimary: true, competition: { select: { id: true, name: true, subjects: { select: { subjectId: true } } } } },
+      select: { isPrimary: true, competition: { select: { id: true, name: true, subjects: { select: { subjectId: true, questionCount: true } } } } },
       orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
     }),
     db.examBoard.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -20,13 +21,31 @@ export default async function NewSimulationPage() {
     db.subject.findMany({ where: visible, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
   const countBy = new Map(counts.map((c) => [c.subjectId, c._count._all]));
+  const rules = await Promise.all(enrollments.map((e) => ruleForCompetition(e.competition.id)));
   const primary = enrollments.find((e) => e.isPrimary);
 
   return (
     <div className="flex flex-col">
       <PageHeader title="Novo simulado" description="Escolha o recorte. As questões são sorteadas no momento em que o simulado começa." />
       <SimulationForm
-        competitions={enrollments.map((e) => ({ id: e.competition.id, name: e.competition.name, subjectIds: e.competition.subjects.map((s) => s.subjectId) }))}
+        competitions={enrollments.map((e, i) => {
+          const rule = rules[i];
+          return {
+            id: e.competition.id,
+            name: e.competition.name,
+            subjectIds: e.competition.subjects.map((s) => s.subjectId),
+            rule: rule
+              ? {
+                  mode: rule.mode,
+                  wrongPenalty: rule.wrongPenalty,
+                  durationMinutes: rule.durationMinutes,
+                  officialQuestions: officialQuestionCount(rule, e.competition.subjects.map((s) => s.questionCount)),
+                  verified: rule.verification === "VERIFIED",
+                  year: rule.year,
+                }
+              : null,
+          };
+        })}
         boards={boards}
         subjects={subjects.map((s) => ({ ...s, available: countBy.get(s.id) ?? 0 })).sort((a, b) => Number(b.available > 0) - Number(a.available > 0) || a.name.localeCompare(b.name, "pt-BR"))}
         defaults={{ competitionId: primary?.competition.id ?? null }}

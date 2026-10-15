@@ -55,9 +55,17 @@ Os concursos do catálogo vêm marcados como **não verificados**: não há data
 | `GEMINI_API_KEY` | Com `gemini` | Chave do Google AI Studio. |
 | `ANTHROPIC_API_KEY` | Com `anthropic` | Chave da Anthropic. |
 | `MENTOR_BASE_URL` / `MENTOR_API_KEY` | Com `openai-compatible` | Endereço da API (por exemplo, Groq ou Ollama) e chave, se o provedor exigir. |
-| `MENTOR_MODEL` | Não | Modelo usado. Padrão: `gemini-3.5-flash-lite` com Gemini e `claude-opus-5` com Anthropic; obrigatório com `openai-compatible`. |
-| `MENTOR_EFFORT` | Não | Profundidade de raciocínio: `low`, `medium` ou `high` (Claude aceita também `xhigh` e `max`). Vazio usa o padrão do provedor. |
-| `MENTOR_DAILY_LIMIT` | Não | Mensagens com IA por estudante por dia. Padrão: `60`. |
+| `MENTOR_MODEL` | Não | Modelo usado. Padrão: `gemini-3.5-flash-lite` com Gemini e `claude-sonnet-5-5` com Anthropic; obrigatório com `openai-compatible`. |
+| `MENTOR_EFFORT` | Não | Profundidade de raciocínio: `low`, `medium` ou `high` (Claude aceita também `xhigh` e `max`). Vazio usa `medium` com Anthropic e o padrão do provedor nos demais. |
+| `MENTOR_DAILY_LIMIT` | Não | Mensagens com IA por estudante por dia. Padrão: `30`. |
+| `MENTOR_MAX_ROUNDS` | Não | Chamadas ao modelo por mensagem do Mentor. Padrão: `5`. |
+| `GEMINI_PAID_TIER` | Não | `on` confirma plano pago do Gemini. Em produção, sem isso o Mentor não usa o Gemini, porque o plano gratuito pode usar os dados dos estudantes. Padrão: `off`. |
+| `ESSAYS_ENABLED` | Não | Liga a área de redação para os estudantes. Vazio: ligada em desenvolvimento e desligada em produção. Ligue depois que `npm run redacao:calibrar` passar. Administradores sempre veem a área. |
+| `ESSAY_MODEL` / `ESSAY_REWRITE_MODEL` / `ESSAY_THEME_MODEL` | Não | Modelos da correção, da reescrita de parágrafo e da geração de temas. Padrão: `claude-sonnet-5-5`. Usam `ANTHROPIC_API_KEY`. |
+| `ESSAY_EFFORT` | Não | Esforço da correção. Padrão: `medium`. |
+| `ESSAY_MONTHLY_LIMIT` / `ESSAY_REWRITE_MONTHLY_LIMIT` | Não | Correções e reescritas de parágrafo por estudante por mês. Padrão: `8` e `20`. Centralizados em `src/lib/plan-limits.ts`, prontos para virar limite por plano. |
+| `ESSAY_DISAGREEMENT_THRESHOLD` / `ESSAY_RANGE_MARGIN` | Não | Diferença entre as duas correções que marca "correção incerta" (padrão `0.12` da nota máxima) e folga somada à faixa (padrão `0.04`). |
+| `STAGE_REMINDER_EMAILS` | Não | `on` envia por e-mail os lembretes de prazo das etapas. Só funciona quando houver provedor de e-mail. Padrão: `off`. |
 | `QUESTION_AI_MODELS` | Não | Modelos do Gemini, em ordem, que leem as provas e geram questões. Quando a cota diária gratuita de um acaba, o próximo assume. Usa a mesma `GEMINI_API_KEY`, qualquer que seja o provedor do Mentor. Padrão: `gemini-3.5-flash-lite,gemini-3.6-flash`. |
 | `STORAGE_DIR` | Não | Pasta dos PDFs importados, páginas renderizadas e figuras das questões. Fica fora da pasta pública e precisa entrar no backup. Padrão: `storage`. |
 | `MENTOR_FALLBACKS` | Não | Só Anthropic. `default` pede à API que refaça em um modelo reserva uma resposta recusada pelos filtros de segurança (recurso beta). `off` desliga. Se a conta não tiver acesso ao beta, o Mentor detecta e segue sem ele. Padrão: `default`. |
@@ -181,3 +189,38 @@ Toda consulta é filtrada pelo usuário da sessão e toda ação valida a entrad
 - **E-mail:** não há provedor de e-mail configurado. Em desenvolvimento, o link de recuperação de senha é impresso no terminal do servidor. Para produção, implemente o envio em `src/modules/auth/mailer.ts`.
 - **Provas oficiais:** a EEAR publica no site oficial só os gabaritos, não os cadernos de prova; essas provas precisam ser enviadas pela tela quando houver o PDF. Arquivos RAR (provas antigas da EsPCEx) não são lidos; extraia os PDFs e use a tela ou `npm run provas -- arquivo`. Os recortes automáticos de figuras são aproximados e precisam de conferência.
 - **Foto de perfil:** fica no banco como imagem pequena (256 px, até 150 KB). Para muitos usuários, prefira um armazenamento de arquivos.
+
+## Redação
+
+A correção usa o Claude (Anthropic) com duas correções independentes por redação, validação do formato e da rubrica, e mostra sempre uma faixa estimada, nunca nota oficial. Só é oferecida para concursos com rubrica publicada em **Admin › Rubricas e temas**, cadastrada com o link e o ano do edital.
+
+Antes de ligar a área em produção (`ESSAYS_ENABLED=on`), rode a calibração com redações que tenham nota humana:
+
+```bash
+npm run redacao:calibrar -- --arquivo=calibracao.json --concurso=espcex --modelos=claude-sonnet-5-5,claude-opus-5-5 --limite=0.1
+```
+
+O relatório mostra, por modelo, a diferença média por critério e no total, quantas notas humanas ficaram fora da faixa, a variação entre as duas correções e o custo médio por correção, e indica o modelo mais barato que passou. O consumo de toda chamada de IA aparece em **Admin › Custos de IA**.
+
+## Aplicativo instalável e revisão offline
+
+O Vértice é um PWA (manifesto em `src/app/manifest.ts`, service worker em `public/sw.js`, registrado só no build de produção). Offline, funciona apenas a revisão de flashcards em `/revisao-offline`: a página baixa os cartões vencidos e os do dia seguinte, guarda as revisões no aparelho com um identificador gerado no cliente e sincroniza quando a conexão volta, sem duplicar. Ao sair da conta, os dados guardados no aparelho são apagados.
+
+## Busca automática de editais
+
+O Vértice acompanha as páginas oficiais dos concursos do catálogo (lista aprovada em `prisma/fontes-editais.json`, só órgãos e bancas) e o Diário Oficial (INLABS, opcional). A leitura é automática; a publicação para o aluno não é:
+
+- documento novo gera na hora um aviso ao aluno com o título e o **link oficial**, sem nenhum dado interpretado;
+- editais e retificações são lidos com IA (Gemini, `EDITAL_AI_MODELS`), campo a campo, com página e trecho; conferências automáticas marcam pendências (data que não aparece no PDF, ordem impossível, soma que não fecha);
+- datas, etapas, disciplinas, pontuação e conteúdo só vão para o concurso depois da revisão em **Admin › Editais**; retificações viram uma lista de mudanças (antes → depois) revisada da mesma forma;
+- a data de prova que o aluno digitou nunca é trocada sozinha: ele escolhe usar a oficial.
+
+```bash
+npm run editais -- fontes                # carrega a lista de fontes no banco
+npm run editais -- verificar             # verifica as fontes vencidas (a primeira verificação registra o que já existe como histórico)
+npm run editais -- continuar             # lê os editais e retificações novos
+npm run editais -- situacao              # resumo por fonte
+npm run test:editais                     # teste de ponta a ponta com site e IA simulados
+```
+
+Agende `verificar` e `continuar` no servidor (cron do sistema ou da hospedagem), nunca dentro de uma requisição de página. Exemplo: `0 7,13,19 * * * cd /app && npm run editais -- verificar && npm run editais -- continuar`. Sites que só abrem no navegador (Marinha, FAB, Cebraspe, portal da Cesgranrio) ficam como "envio manual" no admin.

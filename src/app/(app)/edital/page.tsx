@@ -107,6 +107,11 @@ export default async function EditalPage({
             <span className="text-base text-fg-muted">do edital estudado</span>
           </p>
         </div>
+        <p className="text-sm text-fg-subtle">
+          {tree.incidenceBasis
+            ? `O que mais cai: ${tree.incidenceBasis}. Questões geradas por IA não entram na conta.`
+            : "O que mais cai: ainda não há provas oficiais deste concurso no banco."}
+        </p>
         {tree.competition.editable && <Badge tone="outline">Edital personalizado</Badge>}
       </div>
 

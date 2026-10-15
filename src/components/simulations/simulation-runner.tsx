@@ -4,7 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Kbd, Notice } from "@/components/ui/display";
+import { Badge, Kbd, Notice } from "@/components/ui/display";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/overlay";
 import { formatTimer, plural } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ export interface RunnerQuestion {
   figures: QuestionFigure[];
   subjectName: string;
   options: { id: string; label: string; text: string }[];
+  /** AI-written questions are always labeled, also inside a simulation. */
+  generated: boolean;
 }
 
 interface AnswerState {
@@ -31,12 +33,15 @@ export function SimulationRunner({
   questions,
   initialAnswers,
   deadlineAt,
+  examNote,
 }: {
   attemptId: string;
   title: string;
   questions: RunnerQuestion[];
   initialAnswers: Record<string, AnswerState>;
   deadlineAt: string | null;
+  /** Exam mode: how blanks and wrong answers count under the competition rule. */
+  examNote?: string | null;
 }) {
   const [index, setIndex] = React.useState(() => {
     const firstOpen = questions.findIndex((q) => !initialAnswers[q.simulationQuestionId]?.optionId);
@@ -51,6 +56,20 @@ export function SimulationRunner({
   const [now, setNow] = React.useState(() => Date.now());
   const finishedRef = React.useRef(false);
   const statementRef = React.useRef<HTMLDivElement>(null);
+  // Time on the current question, reported when the student leaves it.
+  const enteredAt = React.useRef(Date.now());
+  const flushTime = React.useCallback(
+    (simulationQuestionId: string) => {
+      const sec = Math.min(3600, Math.round((Date.now() - enteredAt.current) / 1000));
+      enteredAt.current = Date.now();
+      if (sec <= 0) return Promise.resolve();
+      return saveSimulationAnswerAction({ attemptId, simulationQuestionId, elapsedSec: sec }).then(
+        () => undefined,
+        () => undefined,
+      );
+    },
+    [attemptId],
+  );
 
   const q = questions[index]!;
   const current = answers[q.simulationQuestionId] ?? { optionId: null, flagged: false };
@@ -59,17 +78,29 @@ export function SimulationRunner({
   const unansweredList = questions.map((x, i) => ({ i, a: answers[x.simulationQuestionId] })).filter((x) => !x.a?.optionId);
   const remaining = deadlineAt ? Math.max(0, Math.floor((new Date(deadlineAt).getTime() - now) / 1000)) : null;
 
+  const currentId = questions[index]!.simulationQuestionId;
   const finish = React.useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     startFinishing(async () => {
+      await flushTime(currentId);
       const r = await finishSimulationAction(attemptId);
       if (r && !r.ok) {
         finishedRef.current = false;
         toast.error(r.error);
       }
     });
-  }, [attemptId]);
+  }, [attemptId, currentId, flushTime]);
+
+  // Time away from the tab does not count for the question on screen.
+  React.useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") void flushTime(currentId);
+      else enteredAt.current = Date.now();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [currentId, flushTime]);
 
   React.useEffect(() => {
     if (!deadlineAt) return;
@@ -106,12 +137,19 @@ export function SimulationRunner({
 
   const go = React.useCallback(
     (i: number) => {
+      const target = Math.max(0, Math.min(questions.length - 1, i));
+      if (target !== index || reviewing) void flushTime(questions[index]!.simulationQuestionId);
       setReviewing(false);
-      setIndex(Math.max(0, Math.min(questions.length - 1, i)));
+      setIndex(target);
       requestAnimationFrame(() => statementRef.current?.focus());
     },
-    [questions.length],
+    [questions, index, reviewing, flushTime],
   );
+
+  const openReview = () => {
+    void flushTime(q.simulationQuestionId);
+    setReviewing(true);
+  };
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -150,7 +188,7 @@ export function SimulationRunner({
             </span>
           )}
           {!reviewing && (
-            <Button variant="secondary" size="sm" onClick={() => setReviewing(true)}>
+            <Button variant="secondary" size="sm" onClick={openReview}>
               Revisar e finalizar
             </Button>
           )}
@@ -213,8 +251,11 @@ export function SimulationRunner({
         ) : (
           <section aria-label={`Questão ${index + 1} de ${questions.length}`} className="flex flex-col gap-6">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-base text-fg-subtle">
-                <span className="numeral font-medium text-fg">Questão {index + 1}</span> de {questions.length}, {q.subjectName}
+              <p className="flex flex-wrap items-center gap-2 text-base text-fg-subtle">
+                <span>
+                  <span className="numeral font-medium text-fg">Questão {index + 1}</span> de {questions.length}, {q.subjectName}
+                </span>
+                {q.generated && <Badge tone="info">Gerada por IA</Badge>}
               </p>
               <Button
                 size="sm"
@@ -257,6 +298,11 @@ export function SimulationRunner({
                 );
               })}
             </div>
+            {current.optionId && (
+              <Button variant="ghost" size="sm" className="self-start" onClick={() => save(q.simulationQuestionId, { optionId: null })}>
+                Deixar em branco
+              </Button>
+            )}
             <p className="text-sm text-fg-subtle">
               Clique de novo na alternativa marcada para deixar em branco. Atalhos: letras escolhem, <Kbd>M</Kbd> marca dúvida, <Kbd>←</Kbd> <Kbd>→</Kbd> navegam.
             </p>
@@ -272,7 +318,7 @@ export function SimulationRunner({
                   <ChevronRight />
                 </Button>
               ) : (
-                <Button variant="primary" onClick={() => setReviewing(true)}>
+                <Button variant="primary" onClick={openReview}>
                   Revisar e finalizar
                 </Button>
               )}
@@ -317,6 +363,11 @@ export function SimulationRunner({
             </li>
           </ul>
           {remaining === null && <Notice tone="neutral">Simulado sem tempo limite.</Notice>}
+          {examNote && (
+            <Notice tone="info" title="Modo prova">
+              {examNote}
+            </Notice>
+          )}
         </aside>
       </div>
 

@@ -237,6 +237,20 @@ enum NotificationType {
   GOAL
   RECOMMENDATION
   SYSTEM
+  STAGE_DEADLINE
+  ESSAY
+  // A new official document was found (title and link only, never interpreted data).
+  EDITAL_DOCUMENT
+  // Reviewed data from an edital or retificação was published to the competition.
+  EDITAL_UPDATE
+}
+
+enum StageItemKind {
+  DOCUMENT
+  HEALTH_EXAM
+  REGISTRATION_DEADLINE
+  APPEAL_DEADLINE
+  OTHER
 }
 
 enum CalendarEventType {
@@ -297,6 +311,19 @@ enum RecommendationSource {
 enum MentorRole {
   USER
   ASSISTANT
+}
+
+enum ScoringMode {
+  /// One point per correct answer (times the subject weight).
+  RIGHT_COUNT
+  /// Each wrong answer cancels `wrongPenalty` correct answers (Cebraspe style).
+  PENALTY
+}
+
+enum SimulationPurpose {
+  PRACTICE
+  /// Optional placement test offered at the end of onboarding.
+  DIAGNOSTIC
 }
 
 enum SecurityEventType {
@@ -360,6 +387,12 @@ model User {
   recommendations      AiRecommendation[]
   mentorMessages       MentorMessage[]
   achievements         UserAchievement[]
+  dailyMissions        DailyMission[]
+  essays               Essay[]
+  aiUsage              AiUsage[]
+  reviewedRubrics      EssayRubric[]            @relation("RubricReviewer")
+  reviewedExtractions  EditalExtraction[]
+  reviewedThemes       EssayTheme[]             @relation("ThemeReviewer")
 }
 
 model Profile {
@@ -378,6 +411,8 @@ model Profile {
   autoApplyMinorChanges Boolean    @default(false)
   // Lets the planner adjust period energy from real performance (§27).
   energyLearning        Boolean    @default(true)
+  // Length of the daily mission chosen by the student: 15, 20 or 30 minutes.
+  missionMinutes        Int        @default(20)
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
 
@@ -464,22 +499,28 @@ model Competition {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  forkedFrom   Competition?         @relation("CompetitionFork", fields: [forkedFromId], references: [id], onDelete: SetNull)
-  forks        Competition[]        @relation("CompetitionFork")
-  examBoard    ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
-  owner        User?                @relation("CompetitionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  stages       CompetitionStage[]
-  subjects     CompetitionSubject[]
-  topics       CompetitionTopic[]
-  enrollments  StudentCompetition[]
-  questions    Question[]
-  flashcards   Flashcard[]
-  errorEntries ErrorEntry[]
-  simulations  Simulation[]
-  planItems    StudyPlanItem[]
-  events       CalendarEvent[]
-  examPapers   ExamPaper[]
-  drafts       QuestionDraft[]
+  forkedFrom      Competition?         @relation("CompetitionFork", fields: [forkedFromId], references: [id], onDelete: SetNull)
+  forks           Competition[]        @relation("CompetitionFork")
+  examBoard       ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  owner           User?                @relation("CompetitionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  stages          CompetitionStage[]
+  subjects        CompetitionSubject[]
+  topics          CompetitionTopic[]
+  enrollments     StudentCompetition[]
+  questions       Question[]
+  flashcards      Flashcard[]
+  errorEntries    ErrorEntry[]
+  simulations     Simulation[]
+  planItems       StudyPlanItem[]
+  events          CalendarEvent[]
+  examPapers      ExamPaper[]
+  drafts          QuestionDraft[]
+  scoringRules    ScoringRule[]
+  essayRubrics    EssayRubric[]
+  essayThemes     EssayTheme[]
+  editalSources   EditalSource[]
+  editalDocuments EditalDocument[]
+  editalChanges   EditalChange[]
 
   @@index([kind])
   @@index([ownerId])
@@ -492,22 +533,52 @@ model CompetitionStage {
   order         Int
   description   String?
 
-  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  competition Competition            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  items       CompetitionStageItem[]
 
   @@index([competitionId, order])
 }
 
+/**
+ * Checklist item of a catalog stage (document, health exam, deadline), with
+ * the edital it came from. UNVERIFIED until checked against that edital.
+ */
+model CompetitionStageItem {
+  id           String             @id @default(cuid())
+  stageId      String
+  kind         StageItemKind
+  title        String
+  description  String?
+  dueDate      DateTime?          @db.Date
+  order        Int                @default(0)
+  sourceUrl    String?
+  sourceYear   Int?
+  verification VerificationStatus @default(UNVERIFIED)
+  createdAt    DateTime           @default(now())
+
+  stage        CompetitionStage   @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  studentItems StudentStageItem[]
+
+  @@index([stageId, order])
+}
+
 model StudentCompetition {
-  id             String           @id @default(cuid())
-  userId         String
-  competitionId  String
-  isPrimary      Boolean          @default(false)
-  status         EnrollmentStatus @default(ACTIVE)
+  id                 String           @id @default(cuid())
+  userId             String
+  competitionId      String
+  isPrimary          Boolean          @default(false)
+  status             EnrollmentStatus @default(ACTIVE)
   // Used only when the competition has no confirmed exam date.
-  customExamDate DateTime?        @db.Date
-  notes          String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  customExamDate     DateTime?        @db.Date
+  // True when the student keeps their own exam date after an official one was published
+  // (they are asked; the official date never silently replaces theirs).
+  keepCustomExamDate Boolean          @default(false)
+  // Cut-off score typed by the student ("X de Y pontos"), always USER_PROVIDED.
+  cutoffScore        Float?
+  cutoffMaxScore     Float?
+  notes              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   competition   Competition    @relation(fields: [competitionId], references: [id], onDelete: Cascade)
@@ -528,8 +599,38 @@ model StudentStage {
   notes                String?
 
   enrollment StudentCompetition @relation(fields: [studentCompetitionId], references: [id], onDelete: Cascade)
+  items      StudentStageItem[]
 
   @@index([studentCompetitionId, order])
+}
+
+/**
+ * The student's copy of a stage checklist item (or one they added). Due dates
+ * drive in-app reminders 7, 3 and 1 day before.
+ */
+model StudentStageItem {
+  id              String             @id @default(cuid())
+  studentStageId  String
+  catalogItemId   String?
+  kind            StageItemKind
+  title           String
+  notes           String?
+  dueDate         DateTime?          @db.Date
+  // True while the due date is still the catalog's; false once the student changes it.
+  dateFromCatalog Boolean            @default(false)
+  doneAt          DateTime?
+  order           Int                @default(0)
+  sourceUrl       String?
+  sourceYear      Int?
+  verification    VerificationStatus @default(USER_PROVIDED)
+  createdAt       DateTime           @default(now())
+
+  stage       StudentStage          @relation(fields: [studentStageId], references: [id], onDelete: Cascade)
+  catalogItem CompetitionStageItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+
+  @@unique([studentStageId, catalogItemId])
+  @@index([studentStageId, order])
+  @@index([dueDate])
 }
 
 // ─────────────────────────────────────────────────────── syllabus ──
@@ -828,6 +929,8 @@ model FlashcardReview {
   easeAfter      Float
   durationMs     Int?
   reviewedAt     DateTime     @default(now())
+  // Set by the offline review queue: the same review synced twice is stored once.
+  clientId       String?      @unique
 
   flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -978,7 +1081,7 @@ model StudySession {
 // ───────────────────────────────────────────────────── simulations ──
 
 model Simulation {
-  id               String      @id @default(cuid())
+  id               String            @id @default(cuid())
   userId           String
   title            String
   competitionId    String?
@@ -986,11 +1089,16 @@ model Simulation {
   difficulty       Difficulty?
   questionCount    Int
   timeLimitMinutes Int?
-  createdAt        DateTime    @default(now())
+  purpose          SimulationPurpose @default(PRACTICE)
+  // Exam mode: official time, blank answers allowed, scored by the competition rule.
+  examMode         Boolean           @default(false)
+  scoringRuleId    String?
+  createdAt        DateTime          @default(now())
 
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   competition Competition?         @relation(fields: [competitionId], references: [id], onDelete: SetNull)
   examBoard   ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
+  scoringRule ScoringRule?         @relation(fields: [scoringRuleId], references: [id], onDelete: SetNull)
   subjects    SimulationSubject[]
   questions   SimulationQuestion[]
   attempts    SimulationAttempt[]
@@ -1036,6 +1144,9 @@ model SimulationAttempt {
   unanswered   Int              @default(0)
   score        Float?
   durationSec  Int?
+  // Score under the competition's scoring rule, and its breakdown (see engines/simulations/scoring).
+  ruleScore    Float?
+  ruleDetail   Json?
 
   simulation Simulation         @relation(fields: [simulationId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1053,6 +1164,8 @@ model SimulationAnswer {
   flagged              Boolean   @default(false)
   isCorrect            Boolean?
   answeredAt           DateTime?
+  // Seconds the question was on screen, summed across visits.
+  timeSpentSec         Int       @default(0)
 
   attempt            SimulationAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   simulationQuestion SimulationQuestion @relation(fields: [simulationQuestionId], references: [id], onDelete: Cascade)
@@ -1194,6 +1307,8 @@ model MilitaryTest {
   betterWhen           BetterWhen
   distanceMeters       Int?
   targetValue          Float?
+  // Date of this TAF test, when known; otherwise the TAF stage date is used.
+  testDate             DateTime?        @db.Date
   notes                String?
   createdAt            DateTime         @default(now())
 
@@ -1396,4 +1511,415 @@ model QuestionDraft {
 
   @@index([status, competitionId])
   @@index([examPaperId, number])
+}
+
+// ─────────────────────────────────────────────────────── scoring rules ──
+
+/**
+ * How a competition scores its objective exam, per year. Registered by an
+ * admin with its source; UNVERIFIED until checked against the edital.
+ */
+model ScoringRule {
+  id              String             @id @default(cuid())
+  competitionId   String
+  year            Int?
+  mode            ScoringMode        @default(RIGHT_COUNT)
+  // PENALTY: correct answers cancelled by each wrong one (Cebraspe: 1).
+  wrongPenalty    Float?
+  // Official total time of the objective exam.
+  durationMinutes Int?
+  /// [{ subjectId, weight, questions, minShare }] — minShare 0..1 of the subject's maximum.
+  subjects        Json
+  // Minimum share 0..1 of the total maximum, when the edital sets one.
+  minTotalShare   Float?
+  // Published cut-off, as "cutoffScore of maxScore points".
+  cutoffScore     Float?
+  maxScore        Float?
+  sourceUrl       String?
+  sourceNote      String?
+  verification    VerificationStatus @default(UNVERIFIED)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  competition Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  simulations Simulation[]
+
+  @@index([competitionId, year])
+}
+
+// ─────────────────────────────────────────────────────── daily mission ──
+
+/**
+ * The 15–30 minute mission of one local day. The plan is a snapshot taken
+ * when the day's mission is first opened, so it does not shift mid-day.
+ */
+model DailyMission {
+  id            String    @id @default(cuid())
+  userId        String
+  date          DateTime  @db.Date
+  targetMinutes Int
+  /// MissionPlan (engines/study/daily-mission) plus the question ids drawn for the topic block.
+  plan          Json
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+// ──────────────────────────────────────────────────────────── AI usage ──
+
+enum AiFeature {
+  ESSAY_CORRECTION
+  ESSAY_REWRITE
+  ESSAY_THEME
+  MENTOR
+  QUESTION_AI
+  EDITAL_READING
+}
+
+/**
+ * One AI call (or one Mentor answer): tokens and estimated cost. Feeds the
+ * admin cost report that will set plan prices and limits.
+ */
+model AiUsage {
+  id               String    @id @default(cuid())
+  userId           String?
+  feature          AiFeature
+  model            String
+  inputTokens      Int
+  outputTokens     Int
+  cacheReadTokens  Int       @default(0)
+  cacheWriteTokens Int       @default(0)
+  // Batch API calls are billed at half price.
+  batch            Boolean   @default(false)
+  // USD; null when the model has no price registered in modules/ai/usage.
+  costUsd          Float?
+  // The essay, correction or message the call belongs to.
+  refId            String?
+  createdAt        DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([feature, createdAt])
+  @@index([userId, feature, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────── essays ──
+
+enum EssayThemeOrigin {
+  OFFICIAL
+  GENERATED
+}
+
+enum EssayThemeStatus {
+  DRAFT
+  PUBLISHED
+  REJECTED
+}
+
+enum EssayStatus {
+  DRAFT
+  SUBMITTED
+  CORRECTED
+}
+
+/**
+ * How a competition grades its essay, for one edital year. Corrections are
+ * only offered with a published rubric; unverified ones are flagged to students.
+ */
+model EssayRubric {
+  id            String    @id @default(cuid())
+  competitionId String
+  year          Int?
+  editalUrl     String?
+  textType      String
+  minLines      Int?
+  maxLines      Int?
+  // Characters per handwritten line used to estimate lines from typed text.
+  charsPerLine  Int       @default(70)
+  /// [{ key, name, description, maxScore, weight }]
+  criteria      Json
+  // Situations that give the essay zero (fuga ao tema, texto insuficiente…).
+  zeroingRules  String[]
+  verified      Boolean   @default(false)
+  publishedAt   DateTime?
+  reviewedById  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  reviewedBy  User?       @relation("RubricReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  essays      Essay[]
+
+  @@index([competitionId, publishedAt])
+}
+
+model EssayTheme {
+  id            String           @id @default(cuid())
+  competitionId String
+  title         String
+  prompt        String
+  /// [{ title, text, source, generated }] — generated texts never cite real authors or outlets.
+  supportTexts  Json
+  origin        EssayThemeOrigin
+  year          Int?
+  status        EssayThemeStatus @default(DRAFT)
+  aiModel       String?
+  reviewNote    String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime         @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  reviewedBy  User?       @relation("ThemeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  essays      Essay[]
+
+  @@index([competitionId, status])
+}
+
+model Essay {
+  id             String      @id @default(cuid())
+  userId         String
+  themeId        String?
+  rubricId       String
+  // A full rewrite points to the essay it rewrites.
+  originalId     String?
+  text           String
+  charCount      Int         @default(0)
+  estimatedLines Int         @default(0)
+  timeSpentSec   Int?
+  // Written against the clock, in the real format.
+  timed          Boolean     @default(false)
+  status         EssayStatus @default(DRAFT)
+  submittedAt    DateTime?
+  correctedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme       EssayTheme?             @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  rubric      EssayRubric             @relation(fields: [rubricId], references: [id], onDelete: Restrict)
+  original    Essay?                  @relation("EssayRewrite", fields: [originalId], references: [id], onDelete: SetNull)
+  rewrites    Essay[]                 @relation("EssayRewrite")
+  corrections EssayCorrection[]
+  paragraphs  EssayParagraphRewrite[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+}
+
+/**
+ * Two independent AI corrections combined into an estimated range. Never an
+ * official grade.
+ */
+model EssayCorrection {
+  id           String   @id @default(cuid())
+  essayId      String
+  model        String
+  /// [{ key, name, maxScore, score, min, max, excerpt, comment }] — combined from both runs.
+  scores       Json
+  /// [{ title, explanation, excerpt }] — the three issues that cost most.
+  topIssues    Json
+  /// Paragraph suggested for the rewrite exercise: { index, criterionKey, instruction }.
+  exercise     Json?
+  /// Raw validated outputs of the two runs, kept for audit and calibration.
+  runs         Json
+  totalMin     Float
+  totalMax     Float
+  totalMid     Float
+  maxScore     Float
+  // |run1 − run2| / maxScore.
+  disagreement Float
+  uncertain    Boolean  @default(false)
+  // At least one run judged the essay as zeroed (and why).
+  zeroFlag     String?
+  createdAt    DateTime @default(now())
+
+  essay Essay @relation(fields: [essayId], references: [id], onDelete: Cascade)
+
+  @@index([essayId, createdAt])
+}
+
+/**
+ * Rewrite exercise: one paragraph rewritten and re-corrected on one criterion.
+ */
+model EssayParagraphRewrite {
+  id             String   @id @default(cuid())
+  essayId        String
+  paragraphIndex Int
+  criterionKey   String
+  originalText   String
+  newText        String
+  /// { improved, before, after, comment } as validated from the AI output.
+  feedback       Json
+  model          String
+  createdAt      DateTime @default(now())
+
+  essay Essay @relation(fields: [essayId], references: [id], onDelete: Cascade)
+
+  @@index([essayId, createdAt])
+}
+
+/**
+ * Theme generation submitted to the Batch API, collected later.
+ */
+model EssayThemeBatch {
+  id          String    @id @default(cuid())
+  batchId     String    @unique
+  status      String
+  /// competition ids in the batch, keyed by custom_id.
+  requests    Json
+  model       String
+  createdById String?
+  collectedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────── editais ──
+
+enum EditalSourceKind {
+  /// Documents are linked directly on the page.
+  LINK_LIST
+  /// The page lists contest pages; a new one is reported (and optionally followed).
+  INDEX
+  /// Opens only in a browser (bot challenge or JavaScript): manual upload.
+  BROWSER_ONLY
+}
+
+enum EditalDocType {
+  EDITAL
+  RETIFICACAO
+  CONVOCACAO
+  RESULTADO
+  OUTRO
+}
+
+enum EditalDocStatus {
+  NEW
+  READING
+  REVIEW
+  PUBLISHED
+  IGNORED
+  FAILED
+}
+
+enum EditalReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/**
+ * An official page watched for new editais, retificações and results.
+ */
+model EditalSource {
+  id                  String           @id @default(cuid())
+  competitionId       String
+  url                 String
+  kind                EditalSourceKind
+  // Regex (case-insensitive) a link's text or address must match to belong to this competition.
+  filter              String?
+  // INDEX: regex of contest pages to open one level down.
+  follow              String?
+  active              Boolean          @default(true)
+  note                String?
+  lastCheckedAt       DateTime?
+  lastNewDocumentAt   DateTime?
+  lastError           String?
+  consecutiveFailures Int              @default(0)
+  // Document links found on the last successful check (0 where there were many = broken page).
+  lastLinkCount       Int?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  competition Competition      @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  documents   EditalDocument[]
+
+  @@unique([competitionId, url])
+}
+
+/**
+ * One official document (or contest page) found for a competition.
+ */
+model EditalDocument {
+  id            String          @id @default(cuid())
+  sourceId      String?
+  competitionId String
+  url           String
+  title         String
+  publishedAt   DateTime?       @db.Date
+  type          EditalDocType   @default(OUTRO)
+  // How the type was decided: "regras" or "ia".
+  typedBy       String          @default("regras")
+  status        EditalDocStatus @default(NEW)
+  statusNote    String?
+  // Set for downloaded files; the same file under another address is not processed twice.
+  fileHash      String?
+  filePath      String?
+  pageCount     Int?
+  // Found on the first check of a source: history, not news. Never notified.
+  baseline      Boolean         @default(false)
+  aiRequests    Int             @default(0)
+  /// Reading progress: groups already read, so a paused reading resumes.
+  progress      Json?
+  geminiFileUri String?
+  geminiFileAt  DateTime?
+  leaseUntil    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  source      EditalSource?     @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  competition Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  extraction  EditalExtraction?
+  changes     EditalChange[]
+
+  @@unique([competitionId, url])
+  @@index([fileHash])
+  @@index([status, competitionId])
+}
+
+/**
+ * What the AI read from an edital or retificação. Every field carries the page
+ * and the passage that supports it, automatic issues and its review status.
+ */
+model EditalExtraction {
+  id           String    @id @default(cuid())
+  documentId   String    @unique
+  /// { [field]: { value, page, quote, issues: string[], status: PENDING|APPROVED|REJECTED, edited: boolean } }
+  fields       Json
+  // Issues that are not tied to a single field (missing required data, sums that do not close).
+  issues       String[]
+  model        String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  document   EditalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  reviewedBy User?          @relation(fields: [reviewedById], references: [id], onDelete: SetNull)
+}
+
+/**
+ * A change a retificação makes to the edital in force, reviewed like any extracted field.
+ */
+model EditalChange {
+  id            String             @id @default(cuid())
+  documentId    String
+  competitionId String
+  field         String
+  label         String
+  before        Json?
+  after         Json?
+  page          Int?
+  quote         String?
+  status        EditalReviewStatus @default(PENDING)
+  createdAt     DateTime           @default(now())
+
+  document    EditalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  competition Competition    @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId, status])
 }

@@ -16,6 +16,23 @@ import { checkDraft, extractionBatches, missingBaseText } from "./questions/draf
 import { correctKeyFromText, keyForQuestion, keyLetter, keyPairsFromText, reconcileWithKey, resolvePaperKey, sameSubject } from "./questions/answer-key";
 import { figureMarkers, numbersMissingFromSource, padBox, parseRich, richToPlain } from "./questions/rich-text";
 import { refineBox } from "./questions/figure-box";
+import { computeIncidence, describeIncidence, NEUTRAL_INCIDENCE } from "./study/incidence";
+import { buildDailyMission, pickWeakTopic, ERROR_MIN_AGE_DAYS, type MissionInput } from "./study/daily-mission";
+import { compareWithCutoff, examModeMinutes, scoreAttempt, slowQuestions, type Outcome } from "./simulations/scoring";
+import { planDiagnostic } from "./study/diagnostic";
+import { dueReminders, reminderTitle } from "./military/deadlines";
+import { planTafProgression } from "./military/taf-progression";
+import { essayCadence } from "./essays/cadence";
+import { combineRuns, criterionTrends, estimateLines, lineCheck, recurringWeakCriteria, verifiedExcerpt, type CorrectionRun } from "./essays/correction";
+import { calibrationStats, pickModel } from "./essays/calibration";
+import { decideOfflineReview, remainingQueue } from "./review/offline-sync";
+import { documentLinks, extractLinks, isFileLink } from "./editais/links";
+import { classifyDocument, READ_TYPES } from "./editais/classify";
+import { robotsAllows } from "./editais/robots";
+import { checkExtraction, dateInText, numberInText, relevantPages } from "./editais/checks";
+import { compareWithCurrent, isDateField } from "./editais/changes";
+import { matchSubject, matchTopic, statusFromDates } from "./editais/status";
+import { toFields } from "./editais/fields";
 import type { RoutineBlockInput } from "./types";
 import { addDays, zonedToUtc, toDateKey, startOfWeek } from "@/lib/time";
 
@@ -625,4 +642,595 @@ test("figure box grows over a cut drawing and drops a text line above it", () =>
   assert.ok(refined[1] >= 288 && refined[1] <= 300 && refined[3] >= 700 && refined[3] <= 712, `sides ${refined[1]}–${refined[3]}`);
   // Nothing to grow on a blank page: the original box comes back.
   assert.deepEqual(refineBox({ width, height, data: new Uint8Array(width * height * 4).fill(255) }, [100, 100, 200, 200]), [100, 100, 200, 200]);
+});
+
+/* ── incidence ("o que mais cai") ─────────────────────────────────── */
+
+test("incidence: average topic is neutral, frequent topic is high, absent topic is low", () => {
+  const topics = [
+    { topicId: "a", subjectId: "mat", questions: 20, papers: 4 },
+    { topicId: "b", subjectId: "mat", questions: 5, papers: 3 },
+    { topicId: "c", subjectId: "mat", questions: 0, papers: 0 },
+    { topicId: "d", subjectId: "mat", questions: 5, papers: 2 },
+  ];
+  const r = computeIncidence({ topics, totalQuestions: 30, subjectPapers: new Map([["mat", 4]]) });
+  // 4 topics → expected share 25%; b has 5/30 ≈ 16.7% → ratio 0.67 → 0.4
+  assert.ok(r.get("a")!.incidence! > 0.7, "20 of 30 questions is high");
+  assert.equal(r.get("c")!.incidence, 0, "never asked with full confidence");
+  assert.ok(Math.abs(r.get("b")!.incidence! - 0.4) < 0.01);
+  assert.equal(r.get("a")!.confidence, 1);
+  // Exactly average share lands on the neutral value.
+  const avg = computeIncidence({
+    topics: [
+      { topicId: "x", subjectId: "s", questions: 3, papers: 3 },
+      { topicId: "y", subjectId: "s", questions: 3, papers: 3 },
+    ],
+    totalQuestions: 6,
+    subjectPapers: new Map([["s", 3]]),
+  });
+  assert.equal(avg.get("x")!.incidence, NEUTRAL_INCIDENCE);
+});
+
+test("incidence: few papers pull the value toward the average", () => {
+  const topics = [
+    { topicId: "once", subjectId: "fis", questions: 3, papers: 1 },
+    { topicId: "never", subjectId: "fis", questions: 0, papers: 0 },
+    { topicId: "other", subjectId: "fis", questions: 1, papers: 1 },
+  ];
+  const one = computeIncidence({ topics, totalQuestions: 4, subjectPapers: new Map([["fis", 1]]) });
+  const three = computeIncidence({ topics, totalQuestions: 4, subjectPapers: new Map([["fis", 3]]) });
+  assert.equal(one.get("once")!.confidence, 0.33);
+  assert.ok(one.get("once")!.incidence! < three.get("once")!.incidence!, "one paper is trusted less");
+  assert.ok(one.get("never")!.incidence! > 0.3, "one paper is not enough to call a topic irrelevant");
+  assert.equal(three.get("never")!.incidence, 0);
+  // The papers a topic fell in never exceed the papers that covered its subject.
+  assert.ok(one.get("once")!.papers <= one.get("once")!.subjectPapers);
+});
+
+test("incidence: no evidence means unknown, never zero", () => {
+  const topics = [{ topicId: "t", subjectId: "red", questions: 0, papers: 0 }];
+  assert.equal(computeIncidence({ topics, totalQuestions: 50, subjectPapers: new Map() }).get("t")!.incidence, null);
+  assert.equal(computeIncidence({ topics, totalQuestions: 0, subjectPapers: new Map([["red", 2]]) }).get("t")!.incidence, null);
+  assert.equal(computeIncidence({ topics: [], totalQuestions: 10, subjectPapers: new Map() }).size, 0);
+  assert.equal(describeIncidence({ questions: 4, papers: 2, subjectPapers: 3 }), "Caiu em 4 questões, em 2 de 3 provas");
+  assert.equal(describeIncidence({ questions: 1, papers: 1, subjectPapers: 1 }), "Caiu em 1 questão, em 1 de 1 prova");
+  assert.equal(describeIncidence({ questions: 0, papers: 0, subjectPapers: 2 }), "Não caiu nas 2 provas analisadas");
+});
+
+test("incidence feeds priority with the sample in the explanation", () => {
+  const base: TopicCandidate = {
+    topicId: "t1",
+    topicName: "Funções",
+    subjectId: "s1",
+    subjectName: "Matemática",
+    subjectArea: "Exatas",
+    parentName: null,
+    competitions: [{ competitionId: "c1", competitionName: "EsPCEx", isPrimary: true, weightShare: null, incidence: null, daysToExam: null }],
+    progress: null,
+    hardSubject: false,
+    recentErrors: 0,
+  };
+  const neutral = scoreTopic(base);
+  const avg = scoreTopic({ ...base, competitions: [{ ...base.competitions[0]!, incidence: 0.5 }] });
+  assert.equal(avg.score, neutral.score, "average incidence keeps the priority unchanged");
+  const high = scoreTopic({
+    ...base,
+    competitions: [{ ...base.competitions[0]!, incidence: 0.8, incidenceSample: { questions: 12, papers: 4, subjectPapers: 4 } }],
+  });
+  assert.ok(high.score > neutral.score);
+  const reason = high.reasons.find((r) => r.code === "HIGH_INCIDENCE");
+  assert.match(reason!.text, /12 questões, em 4 de 4 provas oficiais de EsPCEx/);
+  const low = scoreTopic({
+    ...base,
+    competitions: [{ ...base.competitions[0]!, incidence: 0.1, incidenceSample: { questions: 0, papers: 0, subjectPapers: 4 } }],
+  });
+  assert.ok(low.score < neutral.score);
+  assert.ok(low.reasons.some((r) => r.code === "LOW_INCIDENCE"));
+});
+
+/* ── daily mission ────────────────────────────────────────────────── */
+
+const missionBase: MissionInput = {
+  targetMinutes: 20,
+  dueCardIds: [],
+  errors: [],
+  topics: [],
+  fallbackTopic: { topicId: "f", topicName: "Funções", subjectName: "Matemática", reason: "Maior prioridade." },
+  secondsPerCard: 30,
+  secondsPerQuestion: 150,
+};
+
+test("mission respects the chosen time and mixes cards, errors and a weak topic", () => {
+  const plan = buildDailyMission({
+    ...missionBase,
+    dueCardIds: Array.from({ length: 50 }, (_, i) => `c${i}`),
+    errors: Array.from({ length: 10 }, (_, i) => ({ entryId: `e${i}`, questionId: `q${i}`, ageDays: 10 })),
+    topics: [
+      { topicId: "w", topicName: "Óptica", subjectName: "Física", answered: 12, correct: 4, daysToReview: null },
+      { topicId: "ok", topicName: "Cinemática", subjectName: "Física", answered: 12, correct: 11, daysToReview: null },
+    ],
+  });
+  for (const minutes of [15, 20, 30]) {
+    const p = buildDailyMission({ ...missionBase, targetMinutes: minutes, dueCardIds: Array.from({ length: 100 }, (_, i) => `c${i}`) });
+    assert.ok(p.estSeconds <= minutes * 60, `${minutes} min mission fits`);
+  }
+  assert.ok(plan.estSeconds <= 20 * 60);
+  assert.ok(plan.estSeconds >= 20 * 60 - 150, "fills the time when there is material");
+  assert.deepEqual(plan.blocks.map((b) => b.kind), ["FLASHCARDS", "ERRORS", "TOPIC"]);
+  const topic = plan.blocks.find((b) => b.kind === "TOPIC");
+  assert.equal(topic?.kind === "TOPIC" && topic.topicId, "w", "the weakest measured topic is picked");
+  assert.ok(plan.leftOver.cards > 0, "what did not fit is reported");
+});
+
+test("mission ignores fresh errors and falls back to the top-priority topic", () => {
+  const plan = buildDailyMission({ ...missionBase, errors: [{ entryId: "e", questionId: "q", ageDays: ERROR_MIN_AGE_DAYS - 1 }] });
+  assert.equal(plan.blocks.length, 1);
+  const b = plan.blocks[0]!;
+  assert.equal(b.kind, "TOPIC");
+  assert.equal(b.kind === "TOPIC" && b.weak, false);
+  assert.equal(b.kind === "TOPIC" && b.questions, 8, "20 min / 2.5 min");
+});
+
+test("mission: unused time flows to cards, tiny topic blocks are dropped, nothing at all stays empty", () => {
+  const plan = buildDailyMission({ ...missionBase, fallbackTopic: null, dueCardIds: Array.from({ length: 30 }, (_, i) => `c${i}`) });
+  assert.equal(plan.blocks.length, 1);
+  assert.equal(plan.blocks[0]!.kind === "FLASHCARDS" && plan.blocks[0]!.cardIds.length, 30, "all 30 cards fit in 15 of the 20 minutes");
+  const empty = buildDailyMission({ ...missionBase, fallbackTopic: null });
+  assert.equal(empty.blocks.length, 0);
+  assert.equal(empty.estSeconds, 0);
+});
+
+test("weak topic: needs a minimum sample, else uses an overdue review", () => {
+  const few = [{ topicId: "a", topicName: "A", subjectName: "S", answered: 3, correct: 0, daysToReview: null }];
+  assert.equal(pickWeakTopic(few), null, "3 answers are not evidence");
+  const overdue = [...few, { topicId: "b", topicName: "B", subjectName: "S", answered: 20, correct: 19, daysToReview: -4 }];
+  const pick = pickWeakTopic(overdue)!;
+  assert.equal(pick.topic.topicId, "b");
+  assert.match(pick.reason, /atrasada há 4 dias/);
+});
+
+/* ── exam scoring ─────────────────────────────────────────────────── */
+
+const outcomes = (subjectId: string, c: number, w: number, b: number) => [
+  ...Array.from({ length: c }, () => ({ subjectId, outcome: "CORRECT" as Outcome })),
+  ...Array.from({ length: w }, () => ({ subjectId, outcome: "WRONG" as Outcome })),
+  ...Array.from({ length: b }, () => ({ subjectId, outcome: "BLANK" as Outcome })),
+];
+
+test("scoring: right count with weights, and subjects outside the rule count with weight 1", () => {
+  const r = scoreAttempt(
+    { mode: "RIGHT_COUNT", wrongPenalty: null, subjects: [{ subjectId: "mat", weight: 2 }], minTotalShare: null },
+    [...outcomes("mat", 6, 4, 0), ...outcomes("port", 5, 5, 0)],
+  );
+  assert.equal(r.points, 6 * 2 + 5);
+  assert.equal(r.maxPoints, 10 * 2 + 10);
+  assert.equal(r.bySubject.find((s) => s.subjectId === "port")!.inRule, false);
+  assert.equal(r.eliminated, false);
+});
+
+test("scoring: Cebraspe penalty makes a blank better than a wrong answer", () => {
+  const rule = { mode: "PENALTY" as const, wrongPenalty: 1, subjects: [], minTotalShare: null };
+  const guessed = scoreAttempt(rule, outcomes("d", 10, 10, 0));
+  const blank = scoreAttempt(rule, outcomes("d", 10, 0, 10));
+  assert.equal(guessed.points, 0);
+  assert.equal(blank.points, 10);
+  // Net score can go below zero; it is shown, never hidden.
+  assert.equal(scoreAttempt(rule, outcomes("d", 2, 8, 0)).points, -6);
+  // Fractional penalty (e.g. 0.25 per wrong answer).
+  assert.equal(scoreAttempt({ ...rule, wrongPenalty: 0.25 }, outcomes("d", 8, 4, 0)).points, 7);
+});
+
+test("scoring: subject and total minimums eliminate, as shares", () => {
+  const r = scoreAttempt(
+    { mode: "RIGHT_COUNT", wrongPenalty: null, subjects: [{ subjectId: "a", weight: 1, minShare: 0.5 }, { subjectId: "b", weight: 1 }], minTotalShare: 0.4 },
+    [...outcomes("a", 2, 3, 0), ...outcomes("b", 5, 0, 0)],
+  );
+  assert.equal(r.bySubject.find((s) => s.subjectId === "a")!.belowMinimum, true);
+  assert.equal(r.belowTotalMinimum, false);
+  assert.equal(r.eliminated, true);
+  const empty = scoreAttempt({ mode: "RIGHT_COUNT", wrongPenalty: null, subjects: [], minTotalShare: null }, []);
+  assert.equal(empty.share, 0);
+  assert.equal(empty.maxPoints, 0);
+});
+
+test("cut-off comparison is proportional, and slow questions are split by result", () => {
+  const c = compareWithCutoff(0.6, { score: 66, max: 120 })!;
+  assert.equal(c.cutoffShare, 0.55);
+  assert.equal(c.above, true);
+  assert.equal(Math.round(c.equivalentPoints), 72);
+  assert.equal(compareWithCutoff(0.5, null), null);
+  assert.equal(compareWithCutoff(0.5, { score: 10, max: 0 }), null);
+
+  const items = [
+    { id: 1, timeSpentSec: 300, outcome: "WRONG" as Outcome },
+    { id: 2, timeSpentSec: 200, outcome: "CORRECT" as Outcome },
+    { id: 3, timeSpentSec: 60, outcome: "WRONG" as Outcome },
+    { id: 4, timeSpentSec: 0, outcome: "BLANK" as Outcome },
+  ];
+  const slow = slowQuestions(items, 120);
+  assert.deepEqual(slow.wrong.map((i) => i.id), [1]);
+  assert.deepEqual(slow.other.map((i) => i.id), [2]);
+  // Without history, the simulation's own average (of timed questions) is the base.
+  assert.equal(slowQuestions(items, null).averageSec, 187);
+  assert.equal(slowQuestions([], null).averageSec, null);
+
+  assert.equal(examModeMinutes(240, 80, 40), 120);
+  assert.equal(examModeMinutes(240, null, 40), 240);
+  assert.equal(examModeMinutes(240, 80, 80), 240);
+});
+
+/* ── diagnostic ───────────────────────────────────────────────────── */
+
+test("diagnostic: 20 questions split by bank incidence, never more than available", () => {
+  const plan = planDiagnostic([
+    { subjectId: "mat", weight: null, available: 60 },
+    { subjectId: "port", weight: null, available: 30 },
+    { subjectId: "ing", weight: null, available: 10 },
+    { subjectId: "red", weight: null, available: 0 },
+  ]);
+  assert.equal(plan.status, "FULL");
+  assert.equal(plan.basis, "INCIDENCE");
+  assert.equal(plan.total, 20);
+  assert.deepEqual(plan.quotas, { mat: 12, port: 6, ing: 2 });
+  assert.equal(plan.suggestedMinutes, 60);
+});
+
+test("diagnostic: confirmed weights decide the split; caps move the rest", () => {
+  const plan = planDiagnostic([
+    { subjectId: "a", weight: 3, available: 4 },
+    { subjectId: "b", weight: 1, available: 40 },
+  ]);
+  assert.equal(plan.basis, "WEIGHT");
+  assert.equal(plan.quotas.a, 4, "capped by what exists");
+  assert.equal(plan.quotas.b, 16);
+  assert.equal(Object.values(plan.quotas).reduce((x, y) => x + y, 0), 20);
+});
+
+test("diagnostic: small banks are reduced or skipped", () => {
+  const reduced = planDiagnostic([{ subjectId: "a", weight: null, available: 8 }]);
+  assert.equal(reduced.status, "REDUCED");
+  assert.equal(reduced.total, 8);
+  const none = planDiagnostic([{ subjectId: "a", weight: null, available: 3 }]);
+  assert.equal(none.status, "UNAVAILABLE");
+  assert.deepEqual(none.quotas, {});
+  assert.equal(planDiagnostic([]).status, "UNAVAILABLE");
+});
+
+/* ── stage deadlines ──────────────────────────────────────────────── */
+
+test("deadline reminders: one per threshold, no late bursts, date change re-arms", () => {
+  const items = [
+    { id: "a", title: "Entregar documentos", dueKey: "2026-10-21", done: false },
+    { id: "b", title: "Exame de vista", dueKey: "2026-10-16", done: false },
+    { id: "c", title: "Recurso", dueKey: "2026-10-15", done: false },
+    { id: "d", title: "Feito", dueKey: "2026-10-15", done: true },
+    { id: "e", title: "Longe", dueKey: "2026-12-01", done: false },
+    { id: "f", title: "Passou", dueKey: "2026-10-10", done: false },
+    { id: "g", title: "Sem data", dueKey: null, done: false },
+  ];
+  const r = dueReminders(items, "2026-10-14");
+  assert.deepEqual(
+    r.map((x) => [x.itemId, x.offset, x.daysLeft]),
+    [
+      ["c", 1, 1],
+      ["b", 3, 2],
+      ["a", 7, 7],
+    ],
+  );
+  assert.equal(reminderTitle(r[0]!), "Amanhã: Recurso");
+  assert.equal(reminderTitle(r[1]!), "Faltam 2 dias: Exame de vista");
+  const moved = dueReminders([{ ...items[0]!, dueKey: "2026-10-20" }], "2026-10-14");
+  assert.notEqual(moved[0]!.dedupeKey, r.find((x) => x.itemId === "a")!.dedupeKey);
+  assert.deepEqual(dueReminders([], "2026-10-14"), []);
+});
+
+/* ── TAF progression ──────────────────────────────────────────────── */
+
+test("TAF progression: feasible plan is gradual, has relief, re-tests and a taper", () => {
+  const p = planTafProgression({ unit: "REPS", betterWhen: "HIGHER", current: 5, target: 8, today: "2026-10-14", testDate: "2027-01-13" });
+  assert.equal(p.status, "ON_TRACK");
+  assert.equal(p.weeksLeft, 13);
+  assert.equal(p.weeks.at(-1)!.kind, "TAPER");
+  assert.equal(p.weeks[3]!.kind, "DELOAD");
+  assert.ok(p.weeks.some((w) => w.reassess));
+  for (let i = 1; i < p.weeks.length; i++) {
+    const gain = p.weeks[i]!.goal - p.weeks[i - 1]!.goal;
+    assert.ok(gain >= 0 && gain <= 1, `week ${i + 1} gains at most one rep`);
+    if (p.weeks[i]!.kind !== "BUILD") assert.equal(gain, 0, "no new goal on relief or taper weeks");
+  }
+  assert.equal(p.weeks.at(-1)!.goal, 8);
+});
+
+test("TAF progression: too little time is said plainly, never compressed", () => {
+  const p = planTafProgression({ unit: "SECONDS", betterWhen: "LOWER", current: 900, target: 720, today: "2026-10-14", testDate: "2026-11-11" });
+  assert.equal(p.status, "TOO_SHORT");
+  assert.ok(p.projected! > 720);
+  for (let i = 1; i < p.weeks.length; i++) {
+    const before = i === 0 ? 900 : p.weeks[i - 1]!.goal;
+    assert.ok(before - p.weeks[i]!.goal <= Math.ceil(before * 0.015), "never faster than the safe step");
+  }
+  assert.ok(p.buildWeeksNeeded! > 10);
+});
+
+test("TAF progression: missing data asks for it instead of guessing", () => {
+  const base = { unit: "REPS" as const, betterWhen: "HIGHER" as const, today: "2026-10-14" };
+  assert.equal(planTafProgression({ ...base, current: null, target: 8, testDate: "2027-01-01" }).status, "NEED_BASELINE");
+  assert.equal(planTafProgression({ ...base, current: 5, target: null, testDate: "2027-01-01" }).status, "NEED_TARGET");
+  assert.equal(planTafProgression({ ...base, current: 9, target: 8, testDate: "2027-01-01" }).status, "TARGET_MET");
+  const noDate = planTafProgression({ ...base, current: 5, target: 8, testDate: null });
+  assert.equal(noDate.status, "NEED_DATE");
+  assert.equal(noDate.buildWeeksNeeded, 3);
+  assert.equal(planTafProgression({ ...base, current: 5, target: 8, testDate: "2026-10-01" }).status, "TEST_PASSED");
+  assert.equal(planTafProgression({ ...base, current: 5, target: 8, testDate: "2026-10-17" }).status, "TOO_SHORT", "days, not weeks, left");
+});
+
+/* ── essays ───────────────────────────────────────────────────────── */
+
+test("essay cadence rises as the exam approaches", () => {
+  const base = { today: "2026-10-14", weeklyFreeMinutes: 1200, dailyLimitMinutes: 240, doneThisWeek: 0 };
+  assert.equal(essayCadence({ ...base, examDate: null }).perWeek, 1);
+  assert.equal(essayCadence({ ...base, examDate: "2027-06-01" }).perWeek, 1);
+  assert.equal(essayCadence({ ...base, examDate: "2027-02-01" }).perWeek, 2);
+  assert.equal(essayCadence({ ...base, examDate: "2026-12-20" }).perWeek, 3);
+  const final = essayCadence({ ...base, examDate: "2026-11-01" });
+  assert.equal(final.perWeek, 3);
+  assert.equal(final.timed, 1);
+  assert.equal(final.phase, "FINAL");
+  assert.equal(essayCadence({ ...base, examDate: "2026-10-01" }).perWeek, 0);
+});
+
+test("essay cadence shrinks to the routine and says why", () => {
+  const base = { today: "2026-10-14", examDate: "2026-12-20", dailyLimitMinutes: 240, doneThisWeek: 1 };
+  const tight = essayCadence({ ...base, weeklyFreeMinutes: 80 });
+  assert.equal(tight.perWeek, 2, "one done plus one that fits");
+  assert.equal(tight.remainingThisWeek, 1);
+  assert.match(tight.reducedBecause!, /só comporta 2 redações/);
+  const noLimit = essayCadence({ ...base, dailyLimitMinutes: 60, weeklyFreeMinutes: 1000 });
+  assert.equal(noLimit.perWeek, 0);
+  assert.match(noLimit.reducedBecause!, /limite diário/);
+  assert.equal(essayCadence({ ...base, weeklyFreeMinutes: null }).perWeek, 3, "no routine: no reduction");
+});
+
+test("essay lines are estimated per paragraph and checked against the sheet", () => {
+  const text = `${"a".repeat(140)}\n\n${"b".repeat(10)}\n${"c".repeat(71)}`;
+  assert.equal(estimateLines(text, 70), 2 + 1 + 2);
+  assert.equal(estimateLines("", 70), 0);
+  assert.equal(lineCheck(5, 20, 30).ok, false);
+  assert.match(lineCheck(25, 20, 30).message, /Cerca de 25 linhas; a folha oficial tem 30/);
+  assert.equal(lineCheck(40, null, 30).ok, false);
+});
+
+const criteria = [
+  { key: "tema", name: "Tema", description: "", maxScore: 4, weight: 1 },
+  { key: "lingua", name: "Língua", description: "", maxScore: 6, weight: 1 },
+];
+const essayText = "A educação transforma vidas.\nPor isso, investir em escolas é urgente.";
+const run = (tema: number, lingua: number, extra: Partial<CorrectionRun> = {}): CorrectionRun => ({
+  criteria: [
+    { key: "tema", score: tema, excerpt: "A educação transforma vidas", comment: "ok" },
+    { key: "lingua", score: lingua, excerpt: "trecho inventado que não existe", comment: "ok" },
+  ],
+  zeroed: false,
+  zeroReason: "",
+  issues: [{ title: "Coesão", explanation: "x", excerpt: "investir em escolas" }],
+  exercise: { paragraph: 2, criterionKey: "lingua", instruction: "Reescreva." },
+  ...extra,
+});
+
+test("two corrections become a range; invented quotes are dropped; scores are clamped", () => {
+  const c = combineRuns(criteria, [run(3, 4), run(4, 4)], essayText, { margin: 0.05, threshold: 0.15, paragraphCount: 2 });
+  assert.equal(c.maxScore, 10);
+  assert.equal(c.totalMid, 7.5);
+  assert.equal(c.totalMin, 6.5);
+  assert.equal(c.totalMax, 8.5);
+  assert.equal(c.uncertain, false);
+  assert.equal(c.scores[0]!.excerpt, "A educação transforma vidas");
+  assert.equal(c.scores[1]!.excerpt, null, "a quote that is not in the essay never reaches the student");
+  assert.equal(c.exercise!.index, 1);
+  const wild = combineRuns(criteria, [run(9, -2), run(9, -2)], essayText, { margin: 0, threshold: 0.15, paragraphCount: 2 });
+  assert.equal(wild.scores[0]!.score, 4);
+  assert.equal(wild.scores[1]!.score, 0);
+});
+
+test("disagreement or a zero from one run makes the correction uncertain", () => {
+  const far = combineRuns(criteria, [run(1, 1), run(4, 6)], essayText, { margin: 0.05, threshold: 0.15, paragraphCount: 2 });
+  assert.equal(far.uncertain, true);
+  assert.equal(far.disagreement, 0.8);
+  const oneZero = combineRuns(criteria, [run(3, 4, { zeroed: true, zeroReason: "Fuga ao tema" }), run(3, 4)], essayText, { margin: 0.05, threshold: 0.15, paragraphCount: 2 });
+  assert.equal(oneZero.uncertain, true);
+  assert.equal(oneZero.totalMin, 0);
+  assert.equal(oneZero.zeroFlag, "Fuga ao tema");
+  const bothZero = combineRuns(criteria, [run(3, 4, { zeroed: true }), run(3, 4, { zeroed: true })], essayText, { margin: 0.05, threshold: 0.15, paragraphCount: 2 });
+  assert.equal(bothZero.totalMax, 0);
+  const badExercise = combineRuns(criteria, [run(3, 4, { exercise: { paragraph: 9, criterionKey: "lingua", instruction: "" } }), run(3, 4)], essayText, { margin: 0, threshold: 0.15, paragraphCount: 2 });
+  assert.equal(badExercise.exercise, null);
+  assert.equal(verifiedExcerpt("  “A educação   transforma vidas”  ".replace(/[“”]/g, ""), essayText) !== null, true);
+});
+
+test("criterion trends compare early and recent essays", () => {
+  const h = [
+    { scores: [{ key: "tema", name: "Tema", score: 2, maxScore: 4 }] },
+    { scores: [{ key: "tema", name: "Tema", score: 3, maxScore: 4 }] },
+    { scores: [{ key: "tema", name: "Tema", score: 4, maxScore: 4 }] },
+  ];
+  const t = criterionTrends(h);
+  assert.equal(t[0]!.key, "tema");
+  assert.equal(t[0]!.delta, 0.5);
+  assert.deepEqual(criterionTrends(h.slice(0, 1)), []);
+});
+
+test("recurring weak essay criteria need repeated evidence", () => {
+  const e = (tema: number, lingua: number) => ({
+    scores: [
+      { key: "tema", name: "Tema", score: tema, maxScore: 4 },
+      { key: "lingua", name: "Língua", score: lingua, maxScore: 6 },
+    ],
+  });
+  assert.deepEqual(recurringWeakCriteria([e(1, 5), e(2, 5), e(4, 5)]).map((x) => x.key), ["tema"]);
+  assert.deepEqual(recurringWeakCriteria([e(1, 5)]), [], "one bad essay is not a pattern");
+  assert.deepEqual(recurringWeakCriteria([e(1, 1), e(1, 1), e(4, 6), e(4, 6), e(4, 6)]), [], "only the last three count");
+});
+
+test("essay calibration: error, range misses and the cheapest passing model", () => {
+  const mk = (id: string, human: number, mid: number, min: number, max: number, cost: number | null) => ({
+    id,
+    maxScore: 10,
+    human: { total: human, criteria: { tema: human / 2 } },
+    ai: { totalMin: min, totalMax: max, totalMid: mid, disagreement: 0.05, criteria: { tema: mid / 2 }, criteriaMax: { tema: 5 } },
+    costUsd: cost,
+  });
+  const good = calibrationStats([mk("a", 7, 7.5, 6.5, 8.5, 0.02), mk("b", 5, 4, 3.5, 4.5, 0.02)]);
+  assert.equal(good.meanAbsTotal, 0.75);
+  assert.equal(good.outsideRange, 1);
+  assert.equal(good.perCriterion[0]!.meanAbs, 0.375);
+  assert.equal(good.meanCostUsd, 0.02);
+  const pricey = calibrationStats([mk("a", 7, 7, 6, 8, 0.08), mk("b", 5, 5, 4, 6, 0.08)]);
+  assert.equal(pickModel([{ model: "opus", stats: pricey }, { model: "sonnet", stats: good }], { maxErrorShare: 0.1, maxOutsideShare: 0.5 })!.model, "sonnet");
+  assert.equal(pickModel([{ model: "opus", stats: pricey }, { model: "sonnet", stats: good }], { maxErrorShare: 0.1, maxOutsideShare: 0.2 })!.model, "opus");
+  assert.equal(pickModel([{ model: "sonnet", stats: good }], { maxErrorShare: 0.01, maxOutsideShare: 1 }), null);
+  assert.equal(calibrationStats([]).cases, 0);
+  assert.equal(calibrationStats([mk("a", 7, 7, 6, 8, null)]).meanCostUsd, null, "unknown price stays unknown");
+});
+
+/* ── offline flashcards ───────────────────────────────────────────── */
+
+test("offline sync: duplicates once, rejects untrusted times, never moves a schedule back", () => {
+  const now = new Date("2026-10-14T12:00:00Z");
+  const card = { lastReviewedAt: new Date("2026-10-14T10:00:00Z"), suspended: false };
+  const review = (clientId: string, iso: string) => ({ clientId, reviewedAt: new Date(iso) });
+  assert.equal(decideOfflineReview(review("a", "2026-10-14T11:00:00Z"), card, new Set(), now), "apply");
+  assert.equal(decideOfflineReview(review("a", "2026-10-14T11:00:00Z"), card, new Set(["a"]), now), "duplicate");
+  assert.equal(decideOfflineReview(review("b", "2026-10-14T09:00:00Z"), card, new Set(), now), "record", "older than the online review");
+  assert.equal(decideOfflineReview(review("c", "2026-10-15T12:00:00Z"), card, new Set(), now), "rejected", "future");
+  assert.equal(decideOfflineReview(review("d", "2026-08-01T12:00:00Z"), card, new Set(), now), "rejected", "too old");
+  assert.equal(decideOfflineReview(review("e", "2026-10-14T11:00:00Z"), null, new Set(), now), "rejected", "card gone or not yours");
+  assert.equal(decideOfflineReview(review("f", "2026-10-14T11:00:00Z"), { ...card, suspended: true }, new Set(), now), "record");
+  assert.equal(decideOfflineReview(review("g", "not a date"), card, new Set(), now), "rejected");
+  assert.equal(decideOfflineReview(review("h", "2026-10-14T11:00:00Z"), { lastReviewedAt: null, suspended: false }, new Set(), now), "apply");
+});
+
+test("offline queue keeps only what the server did not acknowledge", () => {
+  const q = [{ clientId: "a" }, { clientId: "b" }, { clientId: "c" }];
+  assert.deepEqual(remainingQueue(q, [{ clientId: "a", status: "applied" }, { clientId: "b", status: "duplicate" }]), [{ clientId: "c" }]);
+  assert.deepEqual(remainingQueue(q, []), q, "a failed sync keeps everything");
+});
+
+/* ── editais ──────────────────────────────────────────────────────── */
+
+test("edital links: anchors resolved, entities decoded, documents kept", () => {
+  const html = `<a href="/SOO/editais/CFS%202%202027/ie.pdf">&thinsp;1. &thinsp;IE</a>
+    <a href='https://x.gov.br/menu'>Menu</a><a href="#top">topo</a><a href="mailto:a@b">mail</a>
+    <a href="edital_2027.pdf"><span>Edital do Concurso 2027</span></a>
+    <a href="/noticias/aviso-importante">Aviso aos candidatos</a>
+    <a href="/SOO/editais/CFS%202%202027/ie.pdf">duplicado</a>`;
+  const links = extractLinks(html, "https://ingresso.eear.fab.mil.br/instrucoes/index.htm");
+  assert.equal(links.length, 4, "hash, mailto and duplicates are dropped");
+  assert.equal(links[0]!.url, "https://ingresso.eear.fab.mil.br/SOO/editais/CFS%202%202027/ie.pdf");
+  assert.equal(links[0]!.text, "1. IE");
+  assert.equal(links[2]!.url, "https://ingresso.eear.fab.mil.br/instrucoes/edital_2027.pdf");
+  const docs = documentLinks(links);
+  assert.deepEqual(docs.map((d) => d.text), ["1. IE", "Edital do Concurso 2027", "Aviso aos candidatos"]);
+  assert.equal(isFileLink("https://a.br/x.PDF?download=1"), true);
+});
+
+test("edital classification with real titles from official pages", () => {
+  const c = (title: string, url?: string) => classifyDocument({ title, url }).type;
+  assert.equal(c("Edital do Concurso 2027", "https://www.vestibular.ita.br/instrucoes/edital_2027.pdf"), "EDITAL");
+  assert.equal(c("1. IE", "https://ingresso.eear.fab.mil.br/SOO/editais/CFS%202%202027/ie.pdf"), "EDITAL");
+  assert.equal(c("1ª Retificação do Edital nº 6/2025 - RFB"), "RETIFICACAO");
+  assert.equal(c("Edital nº 1 – Abertura – Atualizado conforme retificações"), "EDITAL");
+  assert.equal(c("Resultado Final de Aprovados (retificado em 08/10/2026)"), "RESULTADO", "a retified result is still a result");
+  assert.equal(c("Homologação da Relação de Candidatos Aprovados"), "RESULTADO");
+  assert.equal(c("Gabarito Definitivo dos Testes"), "RESULTADO");
+  assert.equal(c("Edital de convocação para a Entrevista de Heteroidentificação (Sub Judice)"), "CONVOCACAO");
+  assert.equal(c("Edital nº 4 – Locais e horário de realização das provas"), "CONVOCACAO");
+  assert.equal(c("COMUNICADO - Cumprimento de Liminar"), "OUTRO");
+  assert.equal(c("Caderno de Prova (1ª Fase)"), "OUTRO");
+  const bare = classifyDocument({ title: "Edital nº 35/2026" });
+  assert.equal(bare.type, "OUTRO");
+  assert.equal(bare.confident, false, "a bare numbered edital goes to the AI to decide");
+  assert.equal(classifyDocument({ title: "Documento", firstText: "EDITAL DE ABERTURA DO CONCURSO PÚBLICO" }).confident, false, "decided only by the text: not confident");
+  assert.deepEqual(READ_TYPES, ["EDITAL", "RETIFICACAO"]);
+});
+
+test("robots.txt: empty Disallow allows, longest rule wins, our group beats *", () => {
+  assert.equal(robotsAllows(null, "/x"), true);
+  assert.equal(robotsAllows("User-agent: *\nDisallow:", "/concursos"), true);
+  const fgv = "User-agent: *\nDisallow: /core/\nDisallow: /profiles/";
+  assert.equal(robotsAllows(fgv, "/concursos/rfb22"), true);
+  assert.equal(robotsAllows(fgv, "/core/misc/x.js"), false);
+  assert.equal(robotsAllows("User-agent: *\nDisallow: /\nAllow: /editais/", "/editais/a.pdf"), true);
+  assert.equal(robotsAllows("User-agent: Vertice\nDisallow: /\n\nUser-agent: *\nDisallow:", "/editais"), false);
+  assert.equal(robotsAllows("User-agent: *\nDisallow: /*.pdf$", "/a/b.pdf"), false);
+});
+
+test("edital checks: dates and numbers must be printed, order must make sense", () => {
+  const pages = ["EDITAL DE ABERTURA. Inscrições de 10/03/2026 a 20 de março de 2026.", "A prova objetiva será em 05/04/2026. Total de 50 questões. Matemática: 30 questões, peso 2. Português: 20 questões."];
+  const fields = toFields({
+    datas: {
+      datas: [
+        { chave: "inscricao_inicio", rotulo: "Início", data: "2026-03-10", pagina: 1, trecho: "Inscrições de 10/03/2026" },
+        { chave: "inscricao_fim", rotulo: "Fim", data: "2026-03-20", pagina: 1, trecho: "20 de março de 2026" },
+        { chave: "prova_objetiva", rotulo: "Prova", data: "2026-03-01", pagina: 2, trecho: "texto que a IA inventou para justificar" },
+      ],
+    },
+    provas: {
+      disciplinas: [
+        { nome: "Matemática", questoes: 30, peso: 2, notaMinima: null, pagina: 2, trecho: "Matemática: 30 questões" },
+        { nome: "Português", questoes: 25, peso: null, notaMinima: null, pagina: 2, trecho: "Português" },
+      ],
+      pontuacao: null,
+    },
+  });
+  const { fields: f, issues } = checkExtraction(fields, { pageTexts: pages, documentDate: "2026-03-01", type: "EDITAL" });
+  assert.deepEqual(f["data:inscricao_inicio"]!.issues, []);
+  assert.deepEqual(f["data:inscricao_fim"]!.issues, [], "written out in words is found too");
+  assert.ok(f["data:prova_objetiva"]!.issues.some((i) => /não aparece escrita/.test(i)));
+  assert.ok(f["data:prova_objetiva"]!.issues.some((i) => /antes do fim das inscrições/.test(i)));
+  assert.ok(f["data:prova_objetiva"]!.issues.some((i) => /trecho citado não foi encontrado/.test(i)));
+  assert.ok(f["disciplinas"]!.issues.some((i) => /Português: o número de questões \(25\)/.test(i)));
+  assert.ok(issues.some((i) => /soma das questões por disciplina \(55\) não fecha com o total impresso \(50\)/.test(i)));
+  const empty = checkExtraction({}, { pageTexts: [""], documentDate: null, type: "EDITAL" });
+  assert.ok(empty.issues.some((i) => /sem data de prova/.test(i)));
+  assert.ok(empty.issues.some((i) => /não tem camada de texto/.test(i)));
+  assert.equal(dateInText("2026-04-05", "realizada em 5 de abril de 2026"), true);
+  assert.equal(numberInText(1100, "total de 1.100 vagas"), true);
+  assert.equal(numberInText(10, "100 vagas"), false, "10 is not inside 100");
+});
+
+test("relevant pages pick the cronograma and its next page", () => {
+  const pages = ["Capa", "Cronograma: inscrições e data da prova", "continuação da tabela", "Conteúdo programático de matemática"];
+  assert.deepEqual(relevantPages(pages, "datas"), [2, 3]);
+  assert.deepEqual(relevantPages(pages, "conteudo"), [4]);
+  assert.deepEqual(relevantPages(["nada aqui"], "taf"), []);
+});
+
+test("retificação becomes a list of changes against the edital in force", () => {
+  const current = { "data:prova_objetiva": { value: "2026-05-10", label: "Prova objetiva" }, "data:inscricao_fim": { value: "2026-03-20", label: "Fim das inscrições" } };
+  const changes = compareWithCurrent(current, {
+    "data:prova_objetiva": { value: "2026-05-17", label: "Prova objetiva", page: 1, quote: "17/05/2026" },
+    "data:inscricao_fim": { value: "2026-03-20", label: "Fim das inscrições", page: 1, quote: "" },
+    banca: { value: "Fundação X", label: "Banca organizadora", page: 2, quote: "" },
+  });
+  assert.equal(changes.length, 2, "unchanged values are not changes");
+  assert.equal(changes[0]!.summary, "Prova objetiva: 10/05/2026 → 17/05/2026");
+  assert.equal(changes[1]!.summary, "Banca organizadora: não informado → Fundação X");
+  assert.equal(isDateField("data:prova_objetiva"), true);
+});
+
+test("competition status from reviewed dates, and catalog matching", () => {
+  const d = { inscricaoInicio: "2026-03-10", inscricaoFim: "2026-03-20", prova: "2026-05-10", resultadoFinal: "2026-07-01" };
+  assert.equal(statusFromDates(d, "2026-03-01"), "EDITAL_PUBLISHED");
+  assert.equal(statusFromDates(d, "2026-03-15"), "REGISTRATION_OPEN");
+  assert.equal(statusFromDates(d, "2026-04-01"), "REGISTRATION_CLOSED");
+  assert.equal(statusFromDates(d, "2026-06-01"), "EXAM_DONE");
+  assert.equal(statusFromDates(d, "2026-08-01"), "CONCLUDED");
+  const topics = [{ id: "t1", name: "Função logarítmica" }, { id: "t2", name: "Análise combinatória" }];
+  assert.equal(matchTopic("Funções logarítmicas", topics)?.id ?? null, null, "plural/singular below the threshold becomes a new topic for review");
+  assert.equal(matchTopic("Análise Combinatória", topics)!.id, "t2");
+  assert.equal(matchTopic("Geometria espacial", topics), null);
+  const subjects = [{ id: "p", name: "Português", slug: "portugues" }, { id: "m", name: "Matemática", slug: "matematica" }];
+  assert.equal(matchSubject("Língua Portuguesa", subjects)!.id, "p");
+  assert.equal(matchSubject("MATEMÁTICA", subjects)!.id, "m");
+  assert.equal(matchSubject("Biologia", subjects), null);
 });

@@ -28,12 +28,16 @@ export interface AnswerResult {
   explanationNote: string | null;
   errorEntryId: string | null;
   attemptId: string;
+  /** Redoing a notebook error: set when the right answer closed that entry. */
+  resolvedEntryId: string | null;
 }
 
 const answerSchema = z.object({
   questionId: z.string().min(1),
   optionId: z.string().min(1),
   timeSpentSec: z.number().int().min(0).max(24 * 3600).nullable(),
+  /** Redoing this error-notebook entry: a wrong answer reuses it, a right one closes it. */
+  reviewOfEntryId: z.string().min(1).optional(),
 });
 
 /**
@@ -46,7 +50,7 @@ export async function answerQuestionAction(input: z.input<typeof answerSchema>):
     const user = await requireOnboardedUser();
     const parsed = answerSchema.safeParse(input);
     if (!parsed.success) return fail("Resposta inválida.");
-    const { questionId, optionId, timeSpentSec } = parsed.data;
+    const { questionId, optionId, timeSpentSec, reviewOfEntryId } = parsed.data;
 
     const q = await db.question.findFirst({
       where: { id: questionId, OR: [{ ownerId: null }, { ownerId: user.id }] },
@@ -58,10 +62,13 @@ export async function answerQuestionAction(input: z.input<typeof answerSchema>):
     if (!selected || !correct) return fail("Alternativa inválida.");
     const isCorrect = selected.isCorrect;
     const now = new Date();
+    const reviewOf = reviewOfEntryId
+      ? await db.errorEntry.findFirst({ where: { id: reviewOfEntryId, userId: user.id, questionId: q.id }, select: { id: true } })
+      : null;
 
     const result = await db.$transaction(async (tx) => {
       const attempt = await tx.questionAttempt.create({
-        data: { userId: user.id, questionId: q.id, selectedOptionId: selected.id, isCorrect, timeSpentSec, context: "PRACTICE" },
+        data: { userId: user.id, questionId: q.id, selectedOptionId: selected.id, isCorrect, timeSpentSec, context: reviewOf ? "REVIEW" : "PRACTICE" },
       });
       await tx.userQuestionState.upsert({
         where: { userId_questionId: { userId: user.id, questionId: q.id } },
@@ -81,7 +88,16 @@ export async function answerQuestionAction(input: z.input<typeof answerSchema>):
         });
       }
       let errorEntryId: string | null = null;
-      if (!isCorrect) {
+      let resolvedEntryId: string | null = null;
+      if (reviewOf) {
+        // The notebook already has this error: wrong again keeps it open, right closes it.
+        if (isCorrect) {
+          await tx.errorEntry.updateMany({ where: { id: reviewOf.id, userId: user.id }, data: { resolvedAt: now } });
+          resolvedEntryId = reviewOf.id;
+        } else {
+          errorEntryId = reviewOf.id;
+        }
+      } else if (!isCorrect) {
         const entry = await tx.errorEntry.create({
           data: {
             userId: user.id,
@@ -97,7 +113,7 @@ export async function answerQuestionAction(input: z.input<typeof answerSchema>):
         });
         errorEntryId = entry.id;
       }
-      return { attemptId: attempt.id, errorEntryId };
+      return { attemptId: attempt.id, errorEntryId, resolvedEntryId };
     });
 
     revalidateQuestions(q.id);
@@ -110,6 +126,7 @@ export async function answerQuestionAction(input: z.input<typeof answerSchema>):
       explanationNote: q.explanation ? explanationAuthorship(q.source, q.aiModel) : null,
       errorEntryId: result.errorEntryId,
       attemptId: result.attemptId,
+      resolvedEntryId: result.resolvedEntryId,
     });
   });
 }

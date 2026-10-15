@@ -1,8 +1,8 @@
 import "server-only";
+import { limitsFor } from "@/lib/plan-limits";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { env } from "@/lib/env";
 import { localNow, zonedToUtc } from "@/lib/time";
 import { getRecommendationViews, type RecommendationCardView } from "@/modules/recommendations/service";
 import { isMentorAiConfigured } from "./llm";
@@ -86,7 +86,7 @@ export async function getMentorStatus(userId: string, tz: string) {
     aiEnabled: configured,
     model: configured ? mentorProvider().model : null,
     privacyNote: mentorPrivacyNote(),
-    dailyLimit: env.MENTOR_DAILY_LIMIT,
+    dailyLimit: limitsFor({ id: userId }).mentorDailyMessages,
     usedToday: configured ? await mentorUsageToday(userId, tz) : 0,
   };
 }

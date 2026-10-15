@@ -40,7 +40,7 @@ export async function questionStats(userId: string, from: DateKey, toExclusive: 
   return { answered, correct: right, accuracy: answered >= 10 ? right / answered : null };
 }
 
-/** Local days with meaningful study activity, for streaks and consistency. */
+/** Local days with meaningful study activity (or a completed daily mission), for streaks and consistency. */
 export async function activeDayKeys(userId: string, tz: string, days = 120): Promise<Set<string>> {
   const since = new Date(Date.now() - days * 86_400_000);
   const rows = await db.$queryRaw<{ d: Date }[]>(Prisma.sql`
@@ -59,6 +59,10 @@ export async function activeDayKeys(userId: string, tz: string, days = 120): Pro
         FROM "FlashcardReview"
        WHERE "userId" = ${userId} AND "reviewedAt" >= ${since}
        GROUP BY 1 HAVING COUNT(*) >= 5
+      UNION
+      SELECT date AS d
+        FROM "DailyMission"
+       WHERE "userId" = ${userId} AND "completedAt" IS NOT NULL AND "completedAt" >= ${since}
     ) t
   `);
   return new Set(rows.map((r) => r.d.toISOString().slice(0, 10)));

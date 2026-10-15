@@ -31,6 +31,10 @@ export const PROTECTED_PREFIXES = [
   "/admin",
   "/sessao",
   "/primeiros-passos",
+  "/missao",
+  "/diagnostico",
+  "/redacao",
+  "/editais",
 ];
 
 /** Only same-origin relative paths are accepted as post-login destinations. */

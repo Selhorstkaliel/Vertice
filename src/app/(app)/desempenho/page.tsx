@@ -6,11 +6,11 @@ import { ReadinessComponents, ReadinessSummary } from "@/components/dashboard/re
 import { AccuracyTrendChart, ReadinessHistoryChart, SimulationScoresChart, StudyTimeChart } from "@/components/performance/performance-charts-lazy";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { getPrimaryEnrollment, competitionTitle, effectiveExamDate } from "@/modules/competitions/queries";
-import { buildInsights, readinessHistory, simulationSeries, subjectAccuracy, weakestTopics, weeklySeries } from "@/modules/performance/analytics";
+import { buildInsights, errorReasonDistribution, readinessHistory, simulationSeries, subjectAccuracy, weakestTopics, weeklySeries } from "@/modules/performance/analytics";
 import { readinessFor } from "@/modules/performance/metrics";
 import { buildWeeklyReport, getLastWeeklyReport, listWeeklyReports, type WeeklyReportData } from "@/modules/performance/weekly-report";
 import { flashcardStats } from "@/modules/flashcards/service";
-import { formatDateShort, formatDayKey, formatMinutes, formatNumber, formatPercent } from "@/lib/format";
+import { formatDateShort, formatDayKey, formatMinutes, formatNumber, formatPercent, plural } from "@/lib/format";
 import { addDays, localNow, startOfWeek } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +69,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
   const weeks = PERIODS.find((p) => String(p.weeks) === params.semanas)?.weeks ?? 12;
   const today = localNow(tz).key;
 
-  const [series, subjects, weak, sims, primary, cards, lastReport, reports] = await Promise.all([
+  const [series, subjects, weak, sims, primary, cards, lastReport, reports, errorReasons] = await Promise.all([
     weeklySeries(user.id, tz, weeks),
     subjectAccuracy(user.id, tz, weeks),
     weakestTopics(user.id),
@@ -78,6 +78,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
     flashcardStats(user.id, tz),
     getLastWeeklyReport(user.id, tz),
     listWeeklyReports(user.id),
+    errorReasonDistribution(user.id, 4),
   ]);
   const [insights, readiness, history, currentWeek] = await Promise.all([
     buildInsights(user.id, tz, series),
@@ -241,6 +242,45 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
           )}
         </section>
       </div>
+
+      <section aria-labelledby="reasons-title" className="flex max-w-3xl flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <h2 id="reasons-title" className="text-md font-semibold">
+            Por que você erra
+          </h2>
+          <p className="text-sm text-fg-subtle">
+            Últimas {errorReasons.weeks} semanas: {plural(errorReasons.total, "erro registrado", "erros registrados")}, {errorReasons.classified} com motivo
+            {errorReasons.unclassified > 0 && (
+              <>
+                {" e "}
+                <Link href="/caderno-de-erros?motivo=sem-motivo" className="underline underline-offset-4 hover:text-fg">
+                  {errorReasons.unclassified} sem motivo
+                </Link>
+              </>
+            )}
+            . As porcentagens são sobre os erros com motivo.
+          </p>
+        </div>
+        {errorReasons.classified === 0 ? (
+          <p className="py-4 text-base text-fg-muted">Nenhum erro com motivo no período. Ao errar uma questão, escolha o motivo para ver a distribuição aqui.</p>
+        ) : (
+          <ul className="flex flex-col gap-2.5">
+            {errorReasons.reasons.map((r) => (
+              <li key={r.reason} title={`${r.label}: ${r.count} de ${errorReasons.classified} (${formatPercent(r.share)})`}>
+                <Link href={`/caderno-de-erros?motivo=${r.reason}&situacao=todos`} className="grid grid-cols-[9rem_minmax(0,1fr)_5.5rem] items-center gap-3 hover:[&>span:first-child]:text-fg">
+                  <span className="truncate text-base text-fg-muted">{r.label}</span>
+                  <span className="h-2 rounded-full bg-canvas-2">
+                    <span className="block h-full rounded-full bg-info" style={{ width: `${Math.max(2, r.share * 100)}%` }} />
+                  </span>
+                  <span className="numeral text-right text-sm text-fg-muted">
+                    {r.count} <span className="text-fg-subtle">({formatPercent(r.share)})</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <SimulationScoresChart
         data={sims.map((s) => ({
