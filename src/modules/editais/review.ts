@@ -6,7 +6,8 @@ import { dbDateToKey, keyToDbDate, localNow } from "@/lib/time";
 import { slugify } from "@/lib/utils";
 import { describeValue, isDateField } from "@/engines/editais/changes";
 import { matchSubject, matchTopic, statusFromDates } from "@/engines/editais/status";
-import type { ExtractedFields } from "@/engines/editais/fields";
+import { interpretTafIndex } from "@/engines/military/taf-standards";
+import { DATE_LABEL, type DateKey, type ExtractedFields } from "@/engines/editais/fields";
 import { notify } from "@/modules/notifications/service";
 import { syncStageItems } from "@/modules/military/stages";
 import { currentPublishedFields, parseFields } from "./published";
@@ -49,6 +50,16 @@ const DEADLINE_ITEMS: Record<string, { title: string; kind: "REGISTRATION_DEADLI
   "data:pagamento_fim": { title: "Último dia para pagar a taxa de inscrição", kind: "REGISTRATION_DEADLINE", stage: /inscri/ },
   "data:recurso_fim": { title: "Fim do prazo de recurso", kind: "APPEAL_DEADLINE", stage: /prova|exame intelectual|objetiva/ },
 };
+/** Kind of a cronograma event, from its words. */
+function stageItemKind(text: string): "DOCUMENT" | "HEALTH_EXAM" | "REGISTRATION_DEADLINE" | "APPEAL_DEADLINE" | "OTHER" {
+  const t = norm(text);
+  if (/recurso/.test(t)) return "APPEAL_DEADLINE";
+  if (/inscri|isencao|taxa/.test(t)) return "REGISTRATION_DEADLINE";
+  if (/inspecao|saude|exame medico|exames medicos|odonto/.test(t)) return "HEALTH_EXAM";
+  if (/document|matricula|apresentacao|entrega/.test(t)) return "DOCUMENT";
+  return "OTHER";
+}
+
 /** Student stages whose date follows the exam date. */
 const EXAM_STAGE = /prova objetiva|exame intelectual|prova escrita|\bprova\b/;
 
@@ -65,7 +76,18 @@ async function valuesToApply(documentId: string, type: string, fields: Extracted
   return Object.fromEntries(Object.entries(fields).filter(([, f]) => f.status === "APPROVED").map(([k, f]) => [k, f.value]));
 }
 
-async function applyToCatalog(competitionId: string, values: AppliedValues, doc: { url: string; title: string; publishedAt: Date | null }, today: string) {
+/** Stage a cronograma date belongs to, from its label: first the specific stages, then the exam. */
+const DATE_STAGE: [RegExp, RegExp][] = [
+  [/inscri|isencao|taxa|pagamento/, /inscri/],
+  [/inspecao|saude|medic|odonto/, /inspecao|saude/],
+  [/aptidao|fisic|\btaf\b|\btfm\b/, /aptidao|fisic|\btaf\b/],
+  [/psicol/, /psicol/],
+  [/heteroident|verificacao documental|documenta|comprovacao/, /document|verificacao/],
+  [/matricula|apresentacao|incorporacao|concentracao|habilitacao/, /matricula|incorpora|concentra|habilita/],
+  [/prova|exame|fase|escolaridade|objetiva|discursiva|redacao|gabarito|recurso|resultado/, /prova|exame intelectual|escolaridade|objetiva|fase/],
+];
+
+async function applyToCatalog(competitionId: string, values: AppliedValues, doc: { url: string; title: string; publishedAt: Date | null }, today: string, labels: Record<string, string> = {}) {
   const competition = await db.competition.findUniqueOrThrow({
     where: { id: competitionId },
     include: { subjects: { include: { subject: true } }, stages: { orderBy: { order: "asc" } }, topics: { include: { topic: { select: { id: true, name: true, subjectId: true } } } } },
@@ -91,7 +113,8 @@ async function applyToCatalog(competitionId: string, values: AppliedValues, doc:
   });
 
   // Subjects: question counts and weights.
-  const disciplinas = values["disciplinas"] as { nome: string; questoes: number | null; peso: number | null }[] | undefined;
+  const disciplinas = values["disciplinas"] as { nome: string; questoes: number | null; peso: number | null; dia?: number | null }[] | undefined;
+  const dias = values["dias"] as { dia: number; duracaoMinutos: number }[] | undefined;
   const subjects = competition.subjects.map((s) => ({ id: s.subjectId, name: s.subject.name, slug: s.subject.slug }));
   for (const item of disciplinas ?? []) {
     const s = matchSubject(item.nome, subjects);
@@ -107,8 +130,9 @@ async function applyToCatalog(competitionId: string, values: AppliedValues, doc:
   if (pont) {
     const ruleSubjects = (disciplinas ?? []).flatMap((item) => {
       const s = matchSubject(item.nome, subjects);
-      return s && item.peso !== null ? [{ subjectId: s.id, weight: item.peso || 1, questions: item.questoes }] : [];
+      return s && item.peso !== null ? [{ subjectId: s.id, weight: item.peso || 1, questions: item.questoes, day: item.dia ?? null }] : [];
     });
+    const days = (dias ?? []).filter((d) => d.dia >= 1 && d.duracaoMinutos >= 10).map((d) => ({ day: d.dia, durationMinutes: d.duracaoMinutos }));
     const existing = await db.scoringRule.findFirst({ where: { competitionId, year }, select: { id: true } });
     const data = {
       mode: pont.modo === "DESCONTO" ? ("PENALTY" as const) : ("RIGHT_COUNT" as const),
@@ -116,6 +140,8 @@ async function applyToCatalog(competitionId: string, values: AppliedValues, doc:
       subjects: ruleSubjects,
       minTotalShare: pont.notaMinimaTotal !== null && pont.notaMaxima ? pont.notaMinimaTotal / pont.notaMaxima : null,
       maxScore: pont.notaMaxima,
+      // The simulado of each day uses its official time; a one-day exam also sets the total.
+      ...(days.length ? { days, ...(days.length === 1 ? { durationMinutes: days[0]!.durationMinutes } : {}) } : {}),
       sourceUrl: doc.url,
       sourceNote: `Do documento “${doc.title}”.`,
       verification: "VERIFIED" as const,
@@ -125,14 +151,15 @@ async function applyToCatalog(competitionId: string, values: AppliedValues, doc:
   }
 
   // Stages: update order and description, create the missing ones; never delete.
-  const etapas = values["etapas"] as { nome: string; ordem: number; eliminatoria: boolean; descricao: string }[] | undefined;
+  const etapas = values["etapas"] as { nome: string; ordem: number; eliminatoria: boolean; descricao: string; cronograma?: { evento: string; inicio: string | null; fim: string | null }[] }[] | undefined;
   for (const e of etapas ?? []) {
     const found = competition.stages.find((s) => norm(s.name) === norm(e.nome));
     const description = `${e.eliminatoria ? "Eliminatória. " : ""}${e.descricao}`.trim();
     if (found) await db.competitionStage.update({ where: { id: found.id }, data: { order: e.ordem, description } });
     else await db.competitionStage.create({ data: { competitionId, name: e.nome, order: e.ordem, description } });
   }
-  const stages = await db.competitionStage.findMany({ where: { competitionId }, orderBy: { order: "asc" } });
+  // Stages may share an order (catalog + edital names): break ties by id so every publication picks the same stage.
+  const stages = await db.competitionStage.findMany({ where: { competitionId }, orderBy: [{ order: "asc" }, { id: "asc" }] });
   const stageFor = (re: RegExp, fallback: RegExp | null = null) => stages.find((s) => re.test(norm(s.name))) ?? (fallback ? stages.find((s) => fallback.test(norm(s.name))) : null) ?? stages[0] ?? null;
 
   // Deadlines and documents become stage checklist items (verified, with source).
@@ -143,15 +170,73 @@ async function applyToCatalog(competitionId: string, values: AppliedValues, doc:
     // Copies whose date the student did not change follow the official one.
     await db.studentStageItem.updateMany({ where: { catalogItemId: saved.id, dateFromCatalog: true }, data: { dueDate: saved.dueDate, verification: "VERIFIED", sourceUrl: doc.url, sourceYear: year } });
   };
+  // When each stage happens: every cronograma date that lands in it.
+  const stageDates = new Map<string, string[]>();
+  const dateIn = (stageId: string, ...days: (string | null | undefined)[]) => stageDates.set(stageId, [...(stageDates.get(stageId) ?? []), ...days.filter((d): d is string => !!d)]);
   for (const [field, spec] of Object.entries(DEADLINE_ITEMS)) {
     if (typeof values[field] !== "string") continue;
     const stage = stageFor(spec.stage);
-    if (stage) await upsertItem(stage.id, spec.title, spec.kind, values[field] as string);
+    if (stage) {
+      await upsertItem(stage.id, spec.title, spec.kind, values[field] as string);
+      dateIn(stage.id, values[field] as string);
+    }
+  }
+  // Every other approved date of the cronograma ("2ª fase", "inspeção de saúde", "matrícula"...) is an item of its stage.
+  const dated = Object.entries(values).filter(([k, v]) => k.startsWith("data:") && !DEADLINE_ITEMS[k] && typeof v === "string") as [string, string][];
+  const titleOf = (k: string) => labels[k] ?? (DATE_LABEL[k.slice(5).replace(/:\d+$/, "") as DateKey] || "Data do cronograma");
+  // Titles used more than once (including the fixed deadlines above) get their date, so one never overwrites another.
+  const allTitles = [...Object.entries(DEADLINE_ITEMS).filter(([k]) => typeof values[k] === "string").map(([, spec]) => spec.title), ...dated.map(([k]) => titleOf(k))];
+  const repeated = new Set(allTitles.filter((t, i) => allTitles.indexOf(t) !== i));
+  for (const [k, due] of dated) {
+    const label = titleOf(k);
+    const words = norm(label);
+    const target = DATE_STAGE.find(([re]) => re.test(words));
+    const stage = (target && stages.find((s) => target[1].test(norm(s.name)))) ?? stageFor(EXAM_STAGE);
+    if (stage) {
+      await upsertItem(stage.id, (repeated.has(label) ? `${label} (${brDate(due)})` : label).slice(0, 200), stageItemKind(label), due);
+      dateIn(stage.id, due);
+    }
+  }
+
+  // Each stage's cronograma: every dated event becomes an item of that stage, due on its last day.
+  for (const e of etapas ?? []) {
+    const stage = stages.find((s) => norm(s.name) === norm(e.nome));
+    if (!stage) continue;
+    for (const c of e.cronograma ?? []) {
+      const due = c.fim ?? c.inicio;
+      if (!due) continue;
+      const title = c.inicio && c.fim && c.inicio !== c.fim ? `${c.evento} (de ${brDate(c.inicio)} a ${brDate(c.fim)})` : c.evento;
+      await upsertItem(stage.id, title.slice(0, 200), stageItemKind(`${c.evento} ${e.nome}`), due);
+      dateIn(stage.id, c.inicio, c.fim);
+    }
+  }
+  for (const stage of stages) {
+    const days = (stageDates.get(stage.id) ?? []).sort();
+    // The exam stage starts on the exam day itself, not on the announcement of the exam venues.
+    const exam = EXAM_STAGE.test(norm(stage.name)) && typeof values["data:prova_objetiva"] === "string" ? (values["data:prova_objetiva"] as string) : null;
+    if (!days.length && !exam) continue;
+    await db.competitionStage.update({ where: { id: stage.id }, data: { startDate: keyToDbDate(exam ?? days[0]!), endDate: keyToDbDate(days.at(-1) ?? exam!) } });
   }
   const documentos = values["documentos"] as { nome: string; tipo: "DOCUMENTO" | "EXAME_SAUDE"; etapa: string; prazo: string | null }[] | undefined;
   for (const doc_ of documentos ?? []) {
     const stage = stages.find((s) => norm(s.name) === norm(doc_.etapa)) ?? stageFor(doc_.tipo === "EXAME_SAUDE" ? /inspecao|saude/ : /document|matricula|verificacao/, /inscri/);
     if (stage) await upsertItem(stage.id, doc_.nome, doc_.tipo === "EXAME_SAUDE" ? "HEALTH_EXAM" : "DOCUMENT", doc_.prazo);
+  }
+
+  // Physical test indices, per sex and age range: kept in sync with the edital in force.
+  const taf = values["taf"] as { prova: string; sexo: "MASCULINO" | "FEMININO" | "AMBOS"; faixaEtaria: string | null; indice: string; unidade: string }[] | undefined;
+  if (taf?.length) {
+    const existing = await db.competitionTafStandard.findMany({ where: { competitionId }, select: { id: true, test: true, sex: true, ageRange: true } });
+    const keep = new Set<string>();
+    for (const [order, t] of taf.entries()) {
+      const sex = t.sexo === "MASCULINO" ? ("MALE" as const) : t.sexo === "FEMININO" ? ("FEMALE" as const) : ("BOTH" as const);
+      const read = interpretTafIndex(t.prova, t.indice, t.unidade);
+      const data = { year, test: t.prova.slice(0, 200), sex, ageRange: t.faixaEtaria, index: t.indice.slice(0, 80), unitText: t.unidade.slice(0, 40), ...read, order, sourceUrl: doc.url, verification: "VERIFIED" as const };
+      const found = existing.find((e) => norm(e.test) === norm(t.prova) && e.sex === sex && (e.ageRange ?? "") === (t.faixaEtaria ?? ""));
+      const saved = found ? await db.competitionTafStandard.update({ where: { id: found.id }, data }) : await db.competitionTafStandard.create({ data: { competitionId, ...data } });
+      keep.add(saved.id);
+    }
+    await db.competitionTafStandard.deleteMany({ where: { competitionId, id: { notIn: [...keep] } } });
   }
 
   // Syllabus: link catalog topics; items without a match become topics (approved in review).
@@ -222,7 +307,10 @@ export async function publishDocument(documentId: string, adminId: string) {
 
   const before = await currentPublishedFields(doc.competitionId);
   const today = localNow().key;
-  const { topicsChanged } = await applyToCatalog(doc.competitionId, values, doc, today);
+  // Free-text dates ("outra") carry their meaning in the label the edital gave them.
+  const labels: Record<string, string> = Object.fromEntries(Object.entries(fields).map(([k, f]) => [k, f.label]));
+  if (doc.type === "RETIFICACAO") for (const c of await db.editalChange.findMany({ where: { documentId, status: "APPROVED" }, select: { field: true, label: true } })) labels[c.field] = c.label;
+  const { topicsChanged } = await applyToCatalog(doc.competitionId, values, doc, today, labels);
   await db.$transaction([
     db.editalExtraction.update({ where: { documentId }, data: { publishedAt: new Date(), reviewedById: adminId, reviewedAt: new Date() } }),
     db.editalDocument.update({ where: { id: documentId }, data: { status: "PUBLISHED" } }),

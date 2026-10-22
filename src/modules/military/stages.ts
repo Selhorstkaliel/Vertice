@@ -20,6 +20,7 @@ const normalize = (name: string) =>
  * an item already copied is never duplicated nor overwritten.
  */
 export async function syncStageItems(userId: string) {
+  await syncStageDates(userId);
   const enrollments = await db.studentCompetition.findMany({
     where: { userId, status: { not: "ARCHIVED" } },
     select: {
@@ -63,6 +64,30 @@ export async function syncStageItems(userId: string) {
   if (data.length === 0) return 0;
   const { count } = await db.studentStageItem.createMany({ data, skipDuplicates: true });
   return count;
+}
+
+/**
+ * Stage dates from the published edital: a student stage gets the catalog
+ * stage's start date when it has none, and keeps following it while the date
+ * is still the edital's. A date the student typed is never replaced.
+ */
+export async function syncStageDates(userId: string) {
+  const stages = await db.studentStage.findMany({
+    where: { enrollment: { userId, status: { not: "ARCHIVED" } }, OR: [{ date: null }, { dateFromCatalog: true }] },
+    select: { id: true, name: true, date: true, enrollment: { select: { competition: { select: { id: true, forkedFromId: true } } } } },
+  });
+  if (stages.length === 0) return 0;
+  const catalogIds = [...new Set(stages.map((s) => s.enrollment.competition.forkedFromId ?? s.enrollment.competition.id))];
+  const catalog = await db.competitionStage.findMany({ where: { competitionId: { in: catalogIds }, startDate: { not: null } }, select: { competitionId: true, name: true, startDate: true } });
+  let changed = 0;
+  for (const s of stages) {
+    const catalogId = s.enrollment.competition.forkedFromId ?? s.enrollment.competition.id;
+    const source = catalog.find((c) => c.competitionId === catalogId && normalize(c.name) === normalize(s.name));
+    if (!source?.startDate || s.date?.getTime() === source.startDate.getTime()) continue;
+    await db.studentStage.update({ where: { id: s.id }, data: { date: source.startDate, dateFromCatalog: true } });
+    changed++;
+  }
+  return changed;
 }
 
 /** Pending dated items of the student, for reminders and the calendar. */

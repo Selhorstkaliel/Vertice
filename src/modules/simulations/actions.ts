@@ -10,6 +10,7 @@ import { DEADLINE_GRACE_MS, finalizeAttempt, selectQuestions } from "./service";
 import { examModeMinutes } from "@/engines/simulations/scoring";
 import { officialQuestionCount, ruleForCompetition } from "@/modules/scoring/service";
 import { getDiagnosticOffer } from "./diagnostic";
+import { drawRealExamPart, realExamPlan } from "./real-exam";
 
 function revalidateSimulations() {
   for (const p of ["/simulados", "/desempenho", "/painel", "/caderno-de-erros", "/edital", "/questoes"]) revalidatePath(p);
@@ -104,6 +105,41 @@ export async function createSimulationAction(input: SimulationInput): Promise<Ac
       examMode: !!d.examMode,
       scoringRuleId: rule?.id ?? null,
       subjects: { create: d.subjectIds.map((subjectId) => ({ subjectId })) },
+      questions: { create: questionIds.map((questionId, order) => ({ questionId, order })) },
+    },
+    select: { id: true },
+  });
+  const attempt = await startAttempt(user.id, simulation.id, timeLimitMinutes);
+  revalidateSimulations();
+  redirect(`/simulados/tentativa/${attempt.id}`);
+}
+
+/** "Simulado da prova real": one part (day) of the competition's real exam, built from its blueprint. */
+export async function startRealExamAction(competitionId: string, partKey: string): Promise<ActionResult<never>> {
+  const user = await requireOnboardedUser();
+  const id = z.string().min(1).max(40).safeParse(competitionId);
+  if (!id.success) return fail("Concurso inválido.");
+  if (!(await db.competition.findFirst({ where: { id: id.data, OR: [{ ownerId: null }, { ownerId: user.id }] }, select: { id: true } }))) return fail("Concurso inválido.");
+  const plan = await realExamPlan(id.data);
+  const part = plan?.parts.find((p) => p.key === partKey);
+  if (!plan || !part) return fail("Ainda não há uma prova oficial deste concurso no banco para montar o simulado.");
+
+  const questionIds = await drawRealExamPart(user.id, plan.catalogId, part);
+  if (questionIds.length < 3) return fail("Não há questões suficientes deste concurso no banco ainda.");
+  // Fewer questions than the real exam: the official time shrinks in the same proportion.
+  const timeLimitMinutes = examModeMinutes(part.minutes, part.total, questionIds.length);
+
+  const simulation = await db.simulation.create({
+    data: {
+      userId: user.id,
+      title: `${plan.name}: ${part.label}`,
+      competitionId: plan.competitionId,
+      questionCount: questionIds.length,
+      timeLimitMinutes,
+      examMode: true,
+      section: part.label,
+      scoringRuleId: plan.rule?.id ?? null,
+      subjects: { create: part.subjects.map((s) => ({ subjectId: s.subjectId })) },
       questions: { create: questionIds.map((questionId, order) => ({ questionId, order })) },
     },
     select: { id: true },

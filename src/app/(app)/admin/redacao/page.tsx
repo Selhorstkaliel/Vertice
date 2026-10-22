@@ -4,9 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { Badge, Notice, PageHeader, SectionTitle } from "@/components/ui/display";
 import { CollectBatchButton, GenerateThemesForm, OfficialThemeForm, PublishRubricButton, RubricForm, ThemeReviewButtons } from "@/components/admin/essay-admin";
 import { requireAdmin } from "@/modules/auth/admin";
-import { claudeConfigured } from "@/modules/ai/claude";
+import { essayAiConfigured, essayModel, essayProviderLabel } from "@/modules/ai/structured";
 import { parseCriteria, parseSupportTexts } from "@/modules/essays/service";
-import { env } from "@/lib/env";
 import { essaysEnabled } from "@/lib/plan-limits";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
@@ -26,7 +25,7 @@ export default async function EssayAdminPage({ searchParams }: { searchParams: P
   ]);
   const editing = sp.rubrica ? rubrics.find((r) => r.id === sp.rubrica) : undefined;
   const withRubric = competitions.filter((c) => rubrics.some((r) => r.competitionId === c.id && r.publishedAt));
-  const aiReady = claudeConfigured();
+  const aiReady = essayAiConfigured();
 
   return (
     <div className="flex flex-col gap-10">
@@ -41,7 +40,8 @@ export default async function EssayAdminPage({ searchParams }: { searchParams: P
         {essaysEnabled()
           ? "ESSAYS_ENABLED está ativo (ou o servidor está em desenvolvimento)."
           : "Ligue com ESSAYS_ENABLED=on depois que a calibração (npm run redacao:calibrar) passar do limite definido. Administradores sempre veem a área."}{" "}
-        Modelo de correção: {env.ESSAY_MODEL}; reescrita: {env.ESSAY_REWRITE_MODEL}; temas: {env.ESSAY_THEME_MODEL}.{admin.isAdmin && !aiReady ? " ANTHROPIC_API_KEY não configurada." : ""}
+        IA: {essayProviderLabel()}. Correção: {essayModel("correction")}; reescrita: {essayModel("rewrite")}; temas: {essayModel("theme")}.
+        {admin.isAdmin && !aiReady ? " A IA da redação não está configurada (chave ausente ou, em produção, Gemini sem GEMINI_PAID_TIER=on)." : ""}
       </Notice>
 
       <section aria-labelledby="rubrics-title" className="flex flex-col gap-4">

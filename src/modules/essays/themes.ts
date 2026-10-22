@@ -3,7 +3,8 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { buildStructuredParams, getClaudeClient, parseStructured, structuredCall } from "@/modules/ai/claude";
+import { buildStructuredParams, getClaudeClient, parseStructured } from "@/modules/ai/claude";
+import { essayModel, essayProvider, essayStructuredCall } from "@/modules/ai/structured";
 import { recordAiUsage } from "@/modules/ai/usage";
 import { THEME_INSTRUCTIONS, THEME_JSON_SCHEMA, themeReviewWarnings, themesSchema, themeUserMessage } from "./prompts";
 
@@ -21,7 +22,7 @@ async function themeRequestFor(competitionId: string, count: number) {
     feature: "ESSAY_THEME" as const,
     userId: null,
     refId: competitionId,
-    model: env.ESSAY_THEME_MODEL,
+    model: essayModel("theme"),
     effort: "medium" as const,
     maxTokens: THEME_MAX_TOKENS,
     system: [THEME_INSTRUCTIONS],
@@ -60,7 +61,7 @@ async function saveDrafts(competitionId: string, model: string, data: { themes: 
 export async function generateThemesNow(competitionId: string, count: number) {
   const request = await themeRequestFor(competitionId, count);
   if (!request) return { created: 0, reason: "Este concurso não tem rubrica publicada." };
-  const result = await structuredCall(request);
+  const result = await essayStructuredCall(request);
   return { created: await saveDrafts(competitionId, result.model, result.data), reason: null };
 }
 
@@ -69,6 +70,7 @@ export async function generateThemesNow(competitionId: string, count: number) {
  * price, results within hours). Collected later by `collectThemeBatch`.
  */
 export async function submitThemeBatch(adminId: string, count: number) {
+  if (essayProvider() !== "anthropic") throw new Error("A geração em lote usa a Batch API da Anthropic. Com ChatGPT ou Gemini, gere por concurso.");
   const anthropic = getClaudeClient();
   if (!anthropic) throw new Error("ANTHROPIC_API_KEY não configurada.");
   const competitions = await db.essayRubric.findMany({ where: { publishedAt: { not: null } }, select: { competitionId: true }, distinct: ["competitionId"] });

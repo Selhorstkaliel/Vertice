@@ -8,9 +8,9 @@ import { SupportTexts } from "@/components/essays/support-texts";
 import { requireOnboardedUser } from "@/modules/auth/session";
 import { essaysEnabled } from "@/lib/plan-limits";
 import { db } from "@/lib/db";
-import { claudeConfigured } from "@/modules/ai/claude";
 import { essayEnrollments, essayQuota, parseSupportTexts } from "@/modules/essays/service";
-import { ESSAY_PRIVACY_NOTE } from "@/modules/essays/privacy";
+import { essayPrivacyNote } from "@/modules/essays/privacy";
+import { essayAiConfigured, essayProvider } from "@/modules/ai/structured";
 
 export const metadata: Metadata = { title: "Escrever redação" };
 
@@ -84,8 +84,8 @@ export default async function WriteEssayPage({ searchParams }: { searchParams: P
         timed={timed}
         rubric={{ charsPerLine: rubric.charsPerLine, minLines: rubric.minLines, maxLines: rubric.maxLines }}
         correctionsLeft={quota.correctionsLeft}
-        aiReady={claudeConfigured()}
-        privacyNote={ESSAY_PRIVACY_NOTE}
+        aiReady={essayAiConfigured()}
+        privacyNote={essayPrivacyNote(essayProvider())}
       />
     </div>
   );

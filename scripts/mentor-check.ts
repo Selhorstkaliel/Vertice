@@ -18,6 +18,7 @@ import { buildMentorRequest, describeMentorError, getMentorClient, isFallbackRej
 import { mentorProvider } from "@/modules/mentor/provider";
 import { compatRequest } from "@/modules/mentor/providers/openai-compatible";
 import { estimateCostUsd } from "@/modules/ai/usage";
+import { chatGptResponse } from "@/modules/ai/chatgpt";
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const EMAIL = arg("email") ?? "demo@vertice.app";
@@ -32,6 +33,7 @@ const check = (label: string, cond: boolean, extra = "") => {
 
 function cost(model: string, u: { input: number; output: number; cacheRead: number; cacheWrite: number }) {
   const provider = mentorProvider();
+  if (provider.id === "chatgpt") return "franquia do seu plano ChatGPT (não é cobrança por tokens da API)";
   if (provider.id === "gemini") return "sem custo dentro dos limites do plano gratuito do Gemini";
   const usd = estimateCostUsd(model, u);
   if (usd === null) return "preço deste modelo não cadastrado em src/modules/ai/usage.ts";
@@ -46,6 +48,10 @@ function explain(err: unknown) {
 /** Smallest possible call: proves the key, the model name and the endpoint. */
 async function ping(): Promise<{ text: string; model: string }> {
   const provider = mentorProvider();
+  if (provider.id === "chatgpt") {
+    const result = await chatGptResponse({ instructions: "Responda brevemente.", input: [{ role: "user", content: "Responda apenas com a palavra OK." }] });
+    return { text: result.text, model: result.model };
+  }
   if (provider.id === "anthropic") {
     const client = getMentorClient()!;
     const run = () => client.beta.messages.create({ ...buildMentorRequest([{ role: "user", content: "Responda apenas com a palavra OK." }], true), max_tokens: 2000, stream: false });
@@ -75,7 +81,9 @@ async function main() {
   const provider = mentorProvider();
   if (!provider.configured) {
     const hint =
-      provider.id === "gemini"
+      provider.id === "chatgpt"
+        ? "Execute npm run chatgpt -- conectar e autorize o uso do seu plano."
+        : provider.id === "gemini"
         ? "GEMINI_API_KEY não está definida no .env. Crie a chave em https://aistudio.google.com/apikey e rode de novo."
         : provider.id === "openai-compatible"
           ? "Defina MENTOR_BASE_URL e MENTOR_MODEL no .env (e MENTOR_API_KEY, se o provedor exigir)."

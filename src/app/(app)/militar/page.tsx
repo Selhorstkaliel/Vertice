@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, Notice, PageHeader } from "@/components/ui/display";
 import { StagesEditor } from "@/components/competitions/competition-controls";
 import { TafSafetyNotice, TafTestCard, TafTestDialog } from "@/components/military/taf-controls";
+import { TafSexChooser } from "@/components/military/taf-edital";
 import { requireOnboardedUser } from "@/modules/auth/session";
-import { getMilitaryEnrollments, getTafTests, type MilitaryEnrollmentView } from "@/modules/military/service";
+import { getMilitaryEnrollments, getTafStandards, getTafTests, syncTafFromEdital, type MilitaryEnrollmentView, type TafStandardsView } from "@/modules/military/service";
 import { syncStageItems } from "@/modules/military/stages";
 import { localNow } from "@/lib/time";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,51 @@ const TABS = [
 ] as const;
 
 const dateBr = (key: string) => key.split("-").reverse().join("/");
+const SEX_LABEL = { MALE: "Masculino", FEMALE: "Feminino", BOTH: "Ambos" } as const;
+
+function TafStandardsTable({ view, sexKnown }: { view: TafStandardsView; sexKnown: boolean }) {
+  if (view.standards.length === 0) {
+    return (
+      <p className="text-base text-fg-muted">
+        {view.title}: os índices do TAF aparecem aqui quando o edital deste concurso for lido e publicado no Vértice.
+      </p>
+    );
+  }
+  return (
+    <section aria-label={`Índices do TAF de ${view.title}`} className="flex flex-col gap-2">
+      <h2 className="text-md font-semibold tracking-[-0.01em]">
+        {view.title}: índices do edital{view.year ? ` ${view.year}` : ""}
+      </h2>
+      <table className="w-full max-w-3xl text-left">
+        <thead>
+          <tr className="text-sm text-fg-subtle">
+            <th className="pb-2 font-normal">Prova</th>
+            {!sexKnown && <th className="pb-2 font-normal">Sexo</th>}
+            <th className="pb-2 font-normal">Faixa etária</th>
+            <th className="pb-2 font-normal">Índice mínimo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {view.standards.map((s) => (
+            <tr key={s.id} className="border-t border-line-soft">
+              <td className="py-2 text-base text-fg">{s.test}</td>
+              {!sexKnown && <td className="py-2 text-base text-fg-muted">{SEX_LABEL[s.sex]}</td>}
+              <td className="py-2 text-base text-fg-muted">{s.ageRange ?? "—"}</td>
+              <td className="py-2 text-base text-fg">
+                {s.index} {s.unitText}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {view.sourceUrl && (
+        <a href={view.sourceUrl} target="_blank" rel="noreferrer" className="w-fit text-sm text-info underline-offset-4 hover:underline">
+          Conferir no edital oficial
+        </a>
+      )}
+    </section>
+  );
+}
 
 function StageSummary({ enrollment, today }: { enrollment: MilitaryEnrollmentView; today: string }) {
   const stages = enrollment.stages.filter((s) => s.status !== "NOT_APPLICABLE");
@@ -42,8 +88,15 @@ export default async function MilitaryPage({ searchParams }: { searchParams: Pro
   const { aba } = await searchParams;
   const tab = aba === "taf" ? "taf" : "etapas";
   const today = localNow(user.profile.timezone).key;
+  const sex = user.profile.sex;
   if (tab === "etapas") await syncStageItems(user.id);
-  const [enrollments, tests] = await Promise.all([getMilitaryEnrollments(user.id), tab === "taf" ? getTafTests(user.id, today) : Promise.resolve([])]);
+  else await syncTafFromEdital(user.id, sex);
+  const [enrollments, tests, standards] = await Promise.all([
+    getMilitaryEnrollments(user.id),
+    tab === "taf" ? getTafTests(user.id, today) : Promise.resolve([]),
+    tab === "taf" ? getTafStandards(user.id, sex) : Promise.resolve([]),
+  ]);
+  const anyStandards = standards.some((v) => v.standards.length > 0);
   const options = enrollments.map((e) => ({ id: e.id, title: e.title }));
 
   return (
@@ -84,9 +137,9 @@ export default async function MilitaryPage({ searchParams }: { searchParams: Pro
           />
         ) : (
           <div className="flex flex-col gap-10">
-            <Notice tone="warning" title="Confirme no edital oficial">
-              As etapas sugeridas são um modelo geral e cada concurso pode ter etapas diferentes. Ajuste nomes, ordem e datas conforme o edital. Em cada etapa, marque documentos, exames e
-              prazos já cumpridos; os prazos aparecem no calendário e geram lembretes 7, 3 e 1 dia antes.
+            <Notice tone="info" title="Preenchido com o edital">
+              Quando o edital do concurso é publicado no Vértice, as datas de cada etapa e os documentos, exames e prazos entram aqui sozinhos, com o link do edital. Uma data que você
+              mudar continua sua. Marque o que já cumpriu; os prazos aparecem no calendário e geram lembretes 7, 3 e 1 dia antes.
             </Notice>
             {enrollments.map((e) => (
               <section key={e.id} aria-labelledby={`stages-${e.id}`} className="flex flex-col gap-4">
@@ -108,6 +161,10 @@ export default async function MilitaryPage({ searchParams }: { searchParams: Pro
       ) : (
         <div className="flex flex-col gap-8">
           <TafSafetyNotice />
+          {!sex && anyStandards && <TafSexChooser />}
+          {standards.map((v) => (
+            <TafStandardsTable key={v.enrollmentId} view={v} sexKnown={!!sex} />
+          ))}
           {tests.length === 0 ? (
             <EmptyState
               icon={<Activity />}

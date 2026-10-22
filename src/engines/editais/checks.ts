@@ -25,9 +25,26 @@ export function dateVariants(iso: string): string[] {
   return [`${dd}/${mm}/${y}`, `${di}/${mm}/${y}`, `${dd}/${mm}/${y.slice(2)}`, `${dd}.${mm}.${y}`, `${di} de ${month} de ${y}`, `${dd} de ${month} de ${y}`, `${dd}/${mm}`, `${di}/${mm}`, `${di} de ${month}`, `${dd} de ${month}`, `${y}-${mm}-${dd}`];
 }
 
+/**
+ * Military calendars write "27 ABR 26", "29 MAIO 26" and ranges like "27 a 30 ABR 26":
+ * the day, then (after at most a short range) the month, then the year.
+ */
+function militaryDateInText(iso: string, t: string) {
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return false;
+  const month = MONTHS[Number(m) - 1]!;
+  const day = `(^|[^\\d])0?${Number(d)}`;
+  const mon = `(?:${month}|${month.slice(0, 3)})\\.?`;
+  const year = `(?:${y}|${y.slice(2)})(?!\\d)`;
+  const re = new RegExp(`${day}(?:\\s*(?:a|e|-|/)\\s*\\d{1,2})?\\s+${mon}\\s*(?:de\\s+)?${year}`);
+  // Also "de 27 ABR a 29 MAIO 26": the end of a range carries the year.
+  const startOfRange = new RegExp(`${day}\\s+${mon}\\s*(?:a|ate)\\s+\\d{1,2}\\s+[a-z]{3,9}\\.?\\s*${year}`);
+  return re.test(t) || startOfRange.test(t);
+}
+
 export function dateInText(iso: string, text: string) {
   const t = normText(text).replace(/º/g, "");
-  return dateVariants(iso).some((v) => t.includes(v));
+  return dateVariants(iso).some((v) => t.includes(v)) || militaryDateInText(iso, t);
 }
 
 /** A number counts as printed when it appears as a standalone figure (1.234 or 1234). */
@@ -74,6 +91,13 @@ export function checkExtraction(
       for (const d of f.value as { nome: string; questoes: number | null; peso: number | null }[]) {
         if (d.questoes !== null && !numberInText(d.questoes, all)) f.issues.push(`${d.nome}: o número de questões (${d.questoes}) não aparece no PDF.`);
         if (d.peso !== null && !numberInText(d.peso, all)) f.issues.push(`${d.nome}: o peso (${d.peso}) não aparece no PDF.`);
+      }
+    }
+    if (key === "etapas" && Array.isArray(f.value) && hasText) {
+      for (const e of f.value as { nome: string; cronograma?: { evento: string; inicio: string | null; fim: string | null }[] }[]) {
+        for (const c of e.cronograma ?? []) {
+          for (const d of [c.inicio, c.fim]) if (d && !dateInText(d, all)) f.issues.push(`${e.nome}, ${c.evento}: a data ${d.split("-").reverse().join("/")} não aparece escrita no PDF.`);
+        }
       }
     }
     if (key === "cargos" && Array.isArray(f.value) && hasText) {
@@ -127,18 +151,30 @@ const GROUP_WORDS: Record<string, RegExp> = {
   documentos: /\b(documento|certidao|exame|laudo|inspecao de saude|apresentar|atestado)\b/,
 };
 
+/** A dated line: 10/05/2026, 10/05, "10 de maio", "10 MAIO 26". */
+const DATE_LIKE = /\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{1,2} de (?:janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b|\b\d{1,2} (?:jan|fev|mar|abr|mai|maio|jun|jul|ago|set|out|nov|dez)\.? \d{2,4}\b/g;
+
 export function relevantPages(pageTexts: string[], group: string, max = 24): number[] {
   const re = GROUP_WORDS[group];
   if (!re) return [];
+  const dated = group === "datas" || group === "etapas" || group === "documentos";
   const scored = pageTexts
-    .map((t, i) => ({ page: i + 1, hits: (normText(t).match(new RegExp(re.source, "g")) ?? []).length }))
+    .map((t, i) => {
+      const text = normText(t);
+      let hits = (text.match(new RegExp(re.source, "g")) ?? []).length;
+      // The calendar annex is where every date of the process is: never leave it out.
+      if (dated) hits += (text.match(DATE_LIKE) ?? []).length + (/\b(cronograma|calendario)\b/.test(text) && (text.match(DATE_LIKE) ?? []).length >= 3 ? 1000 : 0);
+      return { page: i + 1, hits };
+    })
     .filter((p) => p.hits > 0);
   if (scored.length === 0) return [];
   // Keep neighbours too: a table often continues on the next page.
+  // The cut happens in priority order, so a late but decisive page (the calendar annex) is never dropped for page number.
   const pages = new Set<number>();
-  for (const p of scored.sort((a, b) => b.hits - a.hits).slice(0, max)) {
+  for (const p of scored.sort((a, b) => b.hits - a.hits)) {
+    if (pages.size >= max) break;
     pages.add(p.page);
-    if (p.page < pageTexts.length) pages.add(p.page + 1);
+    if (p.page < pageTexts.length && pages.size < max) pages.add(p.page + 1);
   }
-  return [...pages].sort((a, b) => a - b).slice(0, max);
+  return [...pages].sort((a, b) => a - b);
 }

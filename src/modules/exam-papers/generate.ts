@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { DomainError } from "@/lib/action";
 import { normalizeLabel, wordOverlap } from "@/engines/questions/draft-check";
 import { figureMarkers } from "@/engines/questions/rich-text";
-import { generateJson } from "@/modules/ai/gemini";
+import { generateJson } from "@/modules/ai/documents";
 import { loadCompetitionCatalog } from "./catalog";
 import { evaluateDraft, type DraftVerification } from "./review-check";
 import { GENERATION_SCHEMA, GENERATION_SYSTEM, generationPrompt, SOLVE_SCHEMA, SOLVE_SYSTEM, solvePrompt, type GenerationOutput, type SolveOutput } from "./prompts";

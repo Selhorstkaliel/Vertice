@@ -7,7 +7,7 @@ import { DraftReview } from "@/components/admin/draft-review";
 import { FilterLinks } from "@/components/admin/filter-links";
 import { ApproveCleanButton, AutoRefresh, DeletePaperButton, StartExtractionButton } from "@/components/admin/paper-controls";
 import { requireAdmin } from "@/modules/auth/admin";
-import { questionAiConfigured } from "@/modules/ai/gemini";
+import { questionAiConfigured } from "@/modules/ai/documents";
 import { DRAFT_FILTERS, getPaperReview, parseDraftFilter } from "@/modules/exam-papers/queries";
 import { paperStatus } from "@/modules/exam-papers/format";
 

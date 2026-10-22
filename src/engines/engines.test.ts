@@ -1164,6 +1164,35 @@ test("robots.txt: empty Disallow allows, longest rule wins, our group beats *", 
   assert.equal(robotsAllows("User-agent: *\nDisallow: /*.pdf$", "/a/b.pdf"), false);
 });
 
+test("military calendar dates (27 ABR 26, ranges) count as printed; the calendar annex is always read", () => {
+  const annex = "ANEXO A CALENDÁRIO ANUAL DO CONCURSO DE ADMISSÃO Período de inscrições. 27 ABR 26 a 29 MAIO 26 Solicitação de isenção da taxa. 27 a 30 ABR 26 Exame Intelectual 12 e 13 SET 26";
+  assert.equal(dateInText("2026-04-27", annex), true);
+  assert.equal(dateInText("2026-05-29", annex), true);
+  assert.equal(dateInText("2026-04-30", annex), true);
+  assert.equal(dateInText("2026-09-12", annex), true);
+  assert.equal(dateInText("2026-09-13", annex), true);
+  assert.equal(dateInText("2026-09-14", annex), false);
+  // 30 pages full of the word "inscrição" must not push the calendar out of the 24 pages sent.
+  const pages = [...Array.from({ length: 41 }, () => "inscrição data resultado recurso pagamento inscrição data resultado recurso"), annex, ...Array.from({ length: 17 }, () => "texto")];
+  assert.ok(relevantPages(pages, "datas").includes(42));
+  assert.ok(relevantPages(pages, "etapas").includes(42));
+});
+
+test("edital checks: each stage's cronograma dates must be printed in the PDF", () => {
+  const pages = ["CRONOGRAMA. Inspeção de saúde: de 01/06/2027 a 12/06/2027. Entrega de documentos até 30/07/2027."];
+  const fields = toFields({
+    etapas: {
+      etapas: [
+        { nome: "Inspeção de saúde", ordem: 2, eliminatoria: true, descricao: "Exames médicos.", cronograma: [{ evento: "Inspeção de saúde", inicio: "2027-06-01", fim: "2027-06-12" }], pagina: 1, trecho: "Inspeção de saúde: de 01/06/2027" },
+        { nome: "Matrícula", ordem: 3, eliminatoria: false, descricao: "", cronograma: [{ evento: "Entrega de documentos", inicio: null, fim: "2027-07-30" }, { evento: "Apresentação", inicio: "2027-08-02", fim: null }], pagina: 1, trecho: "Entrega de documentos até 30/07/2027" },
+      ],
+    },
+  });
+  const { fields: f } = checkExtraction(fields, { pageTexts: pages, documentDate: "2027-01-10", type: "EDITAL" });
+  assert.deepEqual((f["etapas"]!.value as { cronograma: unknown[] }[]).map((e) => e.cronograma.length), [1, 2]);
+  assert.deepEqual(f["etapas"]!.issues, ["Matrícula, Apresentação: a data 02/08/2027 não aparece escrita no PDF."]);
+});
+
 test("edital checks: dates and numbers must be printed, order must make sense", () => {
   const pages = ["EDITAL DE ABERTURA. Inscrições de 10/03/2026 a 20 de março de 2026.", "A prova objetiva será em 05/04/2026. Total de 50 questões. Matemática: 30 questões, peso 2. Português: 20 questões."];
   const fields = toFields({
@@ -1176,9 +1205,10 @@ test("edital checks: dates and numbers must be printed, order must make sense", 
     },
     provas: {
       disciplinas: [
-        { nome: "Matemática", questoes: 30, peso: 2, notaMinima: null, pagina: 2, trecho: "Matemática: 30 questões" },
-        { nome: "Português", questoes: 25, peso: null, notaMinima: null, pagina: 2, trecho: "Português" },
+        { nome: "Matemática", questoes: 30, peso: 2, notaMinima: null, dia: null, pagina: 2, trecho: "Matemática: 30 questões" },
+        { nome: "Português", questoes: 25, peso: null, notaMinima: null, dia: null, pagina: 2, trecho: "Português" },
       ],
+      dias: [],
       pontuacao: null,
     },
   });

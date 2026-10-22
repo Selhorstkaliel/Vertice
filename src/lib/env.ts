@@ -11,6 +11,11 @@ const schema = z.object({
   // Public landing page (the Vite project in landing/). The app root redirects visitors there.
   // Empty means "not configured": the root falls back to the sign-in screen.
   NEXT_PUBLIC_LANDING_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  // Personal, locally hosted use of an eligible ChatGPT plan via official OAuth.
+  // This overrides the AI provider for questions, essays, Mentor and edital reading.
+  CHATGPT_PERSONAL_MODE: z.enum(["on", "off"]).default("off"),
+  // Unset: use the model selected from the connected account's catalog at sign-in.
+  CHATGPT_MODEL: z.string().min(1).optional(),
   // Which AI serves the Mentor: "anthropic" (Claude), "gemini" (Google) or any "openai-compatible" API.
   MENTOR_PROVIDER: z.enum(["anthropic", "gemini", "openai-compatible"]).default("anthropic"),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
@@ -39,6 +44,13 @@ const schema = z.object({
   ESSAY_REWRITE_MODEL: z.string().min(1).default("claude-sonnet-5-5"),
   ESSAY_THEME_MODEL: z.string().min(1).default("claude-sonnet-5-5"),
   ESSAY_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+  // Who serves the essay features. Unset: Anthropic when ANTHROPIC_API_KEY exists, otherwise Gemini.
+  ESSAY_PROVIDER: z.enum(["anthropic", "gemini"]).optional(),
+  // Gemini models (in order) for essays; the next one is tried when a model's daily quota ends.
+  ESSAY_GEMINI_MODELS: z
+    .string()
+    .default("gemini-3.6-flash,gemini-3.5-flash-lite")
+    .transform((v) => v.split(",").map((m) => m.trim()).filter(Boolean)),
   // Corrections and paragraph rewrites per student per calendar month.
   ESSAY_MONTHLY_LIMIT: z.coerce.number().int().min(0).max(500).default(8),
   ESSAY_REWRITE_MONTHLY_LIMIT: z.coerce.number().int().min(0).max(1000).default(20),
@@ -90,6 +102,10 @@ if (
 
 if (parsed.data.NODE_ENV === "production" && parsed.data.EDITAIS_ALLOW_LOCAL_SOURCES === "on") {
   throw new Error("EDITAIS_ALLOW_LOCAL_SOURCES só pode ser usado em testes, nunca em produção.");
+}
+
+if (parsed.data.CHATGPT_PERSONAL_MODE === "on" && !["localhost", "127.0.0.1", "[::1]"].includes(new URL(parsed.data.NEXT_PUBLIC_APP_URL).hostname)) {
+  throw new Error("CHATGPT_PERSONAL_MODE exige NEXT_PUBLIC_APP_URL local. Esta integração é para uso pessoal nesta máquina.");
 }
 
 export const env = parsed.data;

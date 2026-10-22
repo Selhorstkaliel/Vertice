@@ -20,8 +20,8 @@
  *              [--quantidade=3] [--rodadas=2] [--publicar]
  *   npm run provas -- limpar                            # apaga figuras e páginas que nenhuma questão usa mais
  *
- * A leitura usa a API do Gemini (GEMINI_API_KEY). No plano gratuito o limite
- * diário acaba rápido: tudo é salvo por lote e `continuar` segue de onde parou.
+ * A leitura usa seu ChatGPT no modo pessoal; nos demais casos, Gemini.
+ * Tudo é salvo por lote e `continuar` segue de onde parou após um limite de uso.
  * Nada é publicado aqui: as questões ficam em /admin/provas para revisão.
  */
 import { readFile, stat } from "node:fs/promises";
@@ -30,7 +30,7 @@ import { unzipSync } from "fflate";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { DomainError } from "@/lib/action";
-import { availableModels, questionAiConfigured } from "@/modules/ai/gemini";
+import { availableModels, questionAiConfigured, documentAiSetupHint } from "@/modules/ai/documents";
 import { classifyDraftsByContent, fillMissingBaseTexts, recheckPaperDrafts, refreshPaper, runPaperExtraction, saveTranscribedQuestions, type TranscribedQuestion } from "@/modules/exam-papers/extract";
 import { isPdf, listFiles, removeFile, storagePath } from "@/lib/storage";
 import { approveCleanDrafts, createExamPaper, downloadFile } from "@/modules/exam-papers/service";
@@ -101,7 +101,7 @@ function end(code: number) {
 
 function requireAi() {
   if (!questionAiConfigured()) {
-    console.error("Configure GEMINI_API_KEY no .env para ler provas.");
+    console.error(documentAiSetupHint());
     end(1);
     return false;
   }

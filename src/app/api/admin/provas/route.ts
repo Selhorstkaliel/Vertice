@@ -2,7 +2,7 @@ import { DomainError } from "@/lib/action";
 import { db } from "@/lib/db";
 import { isSameOrigin } from "@/lib/same-origin";
 import { getAdmin } from "@/modules/auth/admin";
-import { questionAiConfigured } from "@/modules/ai/gemini";
+import { questionAiConfigured, documentAiSetupHint } from "@/modules/ai/documents";
 import { startExtraction } from "@/modules/exam-papers/runner";
 import { createExamPaper, downloadPdf, MAX_PDF_BYTES } from "@/modules/exam-papers/service";
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       admin.id,
     );
     if (!questionAiConfigured()) {
-      await db.examPaper.update({ where: { id: paper.id }, data: { statusNote: "Configure GEMINI_API_KEY no servidor para ler a prova." } });
+      await db.examPaper.update({ where: { id: paper.id }, data: { statusNote: documentAiSetupHint() } });
       return json(201, { id: paper.id, started: false });
     }
     return json(201, { id: paper.id, started: startExtraction(paper.id) });

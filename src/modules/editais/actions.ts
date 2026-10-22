@@ -96,7 +96,7 @@ export async function ignoreDocumentAction(documentId: string): Promise<ActionRe
 export async function readDocumentAction(documentId: string): Promise<ActionResult<null>> {
   return runAction(async () => {
     await requireAdmin();
-    if (!editalAiConfigured()) return fail("Configure GEMINI_API_KEY e EDITAL_AI_MODELS para ler editais.");
+    if (!editalAiConfigured()) return fail("Conecte a IA para ler editais. No modo pessoal: Admin › Conexão de IA (/admin/ia). Com Gemini: configure GEMINI_API_KEY e EDITAL_AI_MODELS.");
     await db.editalDocument.updateMany({ where: { id: documentId, status: { in: ["FAILED", "IGNORED"] }, filePath: { not: null } }, data: { status: "NEW" } });
     const r = await readDocument(documentId, () => undefined);
     revalidateAdmin(documentId);

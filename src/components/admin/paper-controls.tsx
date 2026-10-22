@@ -222,7 +222,7 @@ export function ImportPaperForm({ competitions, aiReady }: { competitions: { id:
         <Button type="submit" variant="primary" loading={pending}>
           Importar e ler a prova
         </Button>
-        {!aiReady && <p className="text-sm text-warning">A leitura automática precisa de GEMINI_API_KEY no servidor; a prova fica guardada até lá.</p>}
+        {!aiReady && <p className="text-sm text-warning">Conecte a IA configurada para ativar a leitura automática; a prova fica guardada até lá. Veja as instruções no início da página.</p>}
       </div>
     </form>
   );

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { fail, fromZodError, ok, runAction, type ActionResult } from "@/lib/action";
 import { requireAdmin } from "@/modules/auth/admin";
-import { claudeConfigured } from "@/modules/ai/claude";
+import { essayAiConfigured } from "@/modules/ai/structured";
 import { criteriaSchema } from "./service";
 import { collectThemeBatch, generateThemesNow, submitThemeBatch } from "./themes";
 
@@ -127,7 +127,7 @@ export async function reviewThemeAction(id: string, input: z.input<typeof review
 export async function generateThemesAction(competitionId: string, count: number): Promise<ActionResult<{ created: number }>> {
   return runAction(async () => {
     await requireAdmin();
-    if (!claudeConfigured()) return fail("Configure ANTHROPIC_API_KEY para gerar temas.");
+    if (!essayAiConfigured()) return fail("Conecte a IA da redação para gerar temas. No modo pessoal: Admin › Conexão de IA (/admin/ia).");
     const n = z.number().int().min(1).max(8).safeParse(count);
     if (!n.success) return fail("Gere de 1 a 8 temas por vez.");
     const r = await generateThemesNow(competitionId, n.data);
@@ -140,10 +140,15 @@ export async function generateThemesAction(competitionId: string, count: number)
 export async function submitThemeBatchAction(count: number): Promise<ActionResult<null>> {
   return runAction(async () => {
     const admin = await requireAdmin();
-    if (!claudeConfigured()) return fail("Configure ANTHROPIC_API_KEY para gerar temas.");
+    if (!essayAiConfigured()) return fail("Conecte a IA da redação para gerar temas. No modo pessoal: Admin › Conexão de IA (/admin/ia).");
     const n = z.number().int().min(1).max(8).safeParse(count);
     if (!n.success) return fail("Gere de 1 a 8 temas por concurso.");
-    const r = await submitThemeBatch(admin.id, n.data);
+    let r: Awaited<ReturnType<typeof submitThemeBatch>>;
+    try {
+      r = await submitThemeBatch(admin.id, n.data);
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : "Falha ao enviar o lote.");
+    }
     if (!r) return fail("Nenhum concurso tem rubrica publicada.");
     revalidateAdmin();
     return ok(null, `Lote enviado com ${r.requests} concursos. Os resultados chegam em até 24 horas; use “Buscar resultados”.`);

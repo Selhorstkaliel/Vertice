@@ -5,6 +5,7 @@ import { Badge, PageHeader, SectionTitle } from "@/components/ui/display";
 import { ScoringRuleForm } from "@/components/admin/scoring-rule-form";
 import { requireAdmin } from "@/modules/auth/admin";
 import { listRules } from "@/modules/scoring/service";
+import { realExamPlan, type RealExamPlan } from "@/modules/simulations/real-exam";
 import { db } from "@/lib/db";
 import { formatPercent } from "@/lib/format";
 import { VERIFICATION_LABEL } from "@/lib/labels";
@@ -22,6 +23,8 @@ export default async function ScoringRulesPage({ searchParams }: { searchParams:
       orderBy: { name: "asc" },
     }),
   ]);
+  const papersBy = await db.examPaper.groupBy({ by: ["competitionId"], where: { status: "PUBLISHED" } });
+  const plans = (await Promise.all(papersBy.map((p) => realExamPlan(p.competitionId)))).filter((p): p is RealExamPlan => !!p).sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   const editing = editar ? rules.find((r) => r.id === editar) : undefined;
   const options = competitions.map((c) => ({ id: c.id, name: c.name, subjects: c.subjects.map((s) => ({ id: s.subject.id, name: s.subject.name, questionCount: s.questionCount })) }));
 
@@ -32,8 +35,35 @@ export default async function ScoringRulesPage({ searchParams }: { searchParams:
       </Link>
       <PageHeader
         title="Regras de pontuação"
-        description="Como cada concurso pontua a prova objetiva: desconto por erro, pesos, mínimos, tempo e nota de corte. Cadastre sempre com a fonte; sem conferência no edital, o aluno vê “Informação não verificada”."
+        description="Como cada concurso pontua a prova objetiva. A regra vem do edital: ao publicar um edital revisado em Editais, pesos, desconto por erro, mínimos, dias e tempo de cada dia são gravados aqui automaticamente. Use o formulário só quando o edital não puder ser lido."
       />
+
+      <section aria-labelledby="formats" className="flex flex-col gap-3">
+        <SectionTitle>
+          <span id="formats">Formato do simulado da prova real</span>
+        </SectionTitle>
+        <p className="-mt-2 max-w-2xl text-sm text-fg-subtle">Montado das provas oficiais mais recentes (um simulado por dia de prova) até existir um edital publicado com a quantidade de questões de cada matéria; aí vale o edital.</p>
+        {plans.length === 0 ? (
+          <p className="text-base text-fg-muted">Nenhuma prova oficial publicada ainda.</p>
+        ) : (
+          <ul className="flex flex-col border-t">
+            {plans.map((plan) => (
+              <li key={plan.competitionId} className="flex flex-col gap-1 border-b border-line-soft py-3">
+                <span className="flex flex-wrap items-center gap-2 text-base text-fg">
+                  {plan.name}
+                  <Badge tone={plan.blueprint.source === "EDITAL" ? "positive" : "neutral"}>{plan.blueprint.source === "EDITAL" ? `Edital ${plan.blueprint.year ?? ""}` : `Prova de ${plan.blueprint.year}`}</Badge>
+                  {!plan.rule && <Badge tone="warning">Sem regra: só acertos</Badge>}
+                </span>
+                {plan.parts.map((part) => (
+                  <span key={part.key} className="text-sm text-fg-subtle">
+                    {part.label}: {part.total} questões, {part.minutes} min{part.estimatedTime ? " (estimado)" : ""}. {part.subjectsView.map((x) => `${x.name} ${x.questions}`).join(", ")}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section aria-labelledby="rules-list" className="flex flex-col gap-3">
         <SectionTitle>
@@ -70,7 +100,7 @@ export default async function ScoringRulesPage({ searchParams }: { searchParams:
 
       <section aria-labelledby="rule-form" className="flex flex-col gap-3">
         <SectionTitle>
-          <span id="rule-form">{editing ? `Editar: ${editing.competition.name} ${editing.year ?? ""}` : "Nova regra"}</span>
+          <span id="rule-form">{editing ? `Editar: ${editing.competition.name} ${editing.year ?? ""}` : "Cadastrar regra manualmente"}</span>
         </SectionTitle>
         <ScoringRuleForm
           key={editing?.id ?? "new"}

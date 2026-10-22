@@ -7,7 +7,7 @@ import { FilterLinks } from "@/components/admin/filter-links";
 import { GenerateForm } from "@/components/admin/generate-form";
 import { ApproveCleanButton } from "@/components/admin/paper-controls";
 import { requireAdmin } from "@/modules/auth/admin";
-import { questionAiConfigured } from "@/modules/ai/gemini";
+import { questionAiConfigured, documentAiSetupHint } from "@/modules/ai/documents";
 import { DRAFT_FILTERS, getGeneratedReview, parseDraftFilter } from "@/modules/exam-papers/queries";
 
 export const metadata: Metadata = { title: "Questões geradas" };
@@ -28,7 +28,7 @@ export default async function GeneratedQuestionsPage({ searchParams }: { searchP
         description="Questões inéditas no estilo de cada prova, escritas com IA a partir das questões oficiais publicadas. Os alunos as veem marcadas como geradas por IA, nunca como oficiais."
         actions={<ApproveCleanButton filter={{ origin: "GENERATED" }} count={counts.prontas} />}
       />
-      {!aiReady && <Notice tone="warning">Configure GEMINI_API_KEY no servidor para gerar questões.</Notice>}
+      {!aiReady && <Notice tone="warning">{documentAiSetupHint()}</Notice>}
 
       <section aria-labelledby="gerar">
         <SectionTitle>

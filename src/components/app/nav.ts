@@ -8,6 +8,7 @@ import {
   FileText,
   ClipboardList,
   Coins,
+  PlugZap,
   Clock3,
   Crosshair,
   Flag,
@@ -68,6 +69,7 @@ export const NAV_GROUPS: NavItem[][] = [
     { href: "/admin/etapas", label: "Itens das etapas", icon: ClipboardList, keywords: ["administração", "documentos", "inspeção", "prazos"], adminOnly: true },
     { href: "/admin/editais", label: "Editais", icon: FileSearch, keywords: ["administração", "edital", "retificação", "fontes"], adminOnly: true },
     { href: "/admin/redacao", label: "Rubricas e temas", icon: PenLine, keywords: ["administração", "redação", "rubrica", "tema"], adminOnly: true },
+    { href: "/admin/ia", label: "Conexão de IA", icon: PlugZap, keywords: ["administração", "chatgpt", "openai", "conectar", "ia"], adminOnly: true },
     { href: "/admin/custos", label: "Custos de IA", icon: Coins, keywords: ["administração", "tokens", "custo", "consumo"], adminOnly: true },
   ],
 ];

@@ -10,9 +10,9 @@ import { db } from "@/lib/db";
 import { formatDateTime, formatNumber, formatTimer } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { lineCheck, paragraphsOf } from "@/engines/essays/correction";
-import { claudeConfigured } from "@/modules/ai/claude";
 import { essayQuota, parseCriteria, parseScores } from "@/modules/essays/service";
-import { ESSAY_PRIVACY_NOTE } from "@/modules/essays/privacy";
+import { essayPrivacyNote } from "@/modules/essays/privacy";
+import { essayAiConfigured, essayProvider } from "@/modules/ai/structured";
 import { z } from "zod";
 
 export const metadata: Metadata = { title: "Correção da redação" };
@@ -166,7 +166,7 @@ export default async function EssayResultPage({ params }: { params: Promise<{ id
           <p className="max-w-3xl text-base text-fg">
             Reescreva o {exercise.index + 1}º parágrafo pensando em <strong className="font-medium">{exerciseCriterion.name}</strong>. {exercise.instruction}
           </p>
-          <ParagraphRewriteForm essayId={essay.id} original={paragraphs[exercise.index]!} disabled={!claudeConfigured()} rewritesLeft={quota.rewritesLeft} />
+          <ParagraphRewriteForm essayId={essay.id} original={paragraphs[exercise.index]!} disabled={!essayAiConfigured()} rewritesLeft={quota.rewritesLeft} />
           {essay.paragraphs.length > 0 && (
             <ul className="flex max-w-3xl flex-col gap-3 pt-2">
               {essay.paragraphs.map((p) => {
@@ -204,7 +204,7 @@ export default async function EssayResultPage({ params }: { params: Promise<{ id
       </section>
 
       <Notice tone="neutral" title="Privacidade">
-        {ESSAY_PRIVACY_NOTE}
+        {essayPrivacyNote(essayProvider())}
       </Notice>
     </div>
   );

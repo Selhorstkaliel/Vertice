@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, EmptyState, Notice, PageHeader, SectionTitle } from "@/components/ui/display";
 import { AutoRefresh, ImportPaperForm } from "@/components/admin/paper-controls";
 import { requireAdmin } from "@/modules/auth/admin";
-import { questionAiConfigured } from "@/modules/ai/gemini";
+import { questionAiConfigured, documentAiSetupHint } from "@/modules/ai/documents";
 import { listExamPapers } from "@/modules/exam-papers/queries";
 import { paperStatus } from "@/modules/exam-papers/format";
 
@@ -33,7 +33,7 @@ export default async function ExamPapersPage() {
 
       {!aiReady && (
         <Notice tone="warning" title="Leitura automática desativada">
-          Configure GEMINI_API_KEY no servidor. Sem ela, as provas ficam guardadas e podem ser lidas depois.
+          {documentAiSetupHint()} As provas ficam guardadas e podem ser lidas depois da conexão.
         </Notice>
       )}
 

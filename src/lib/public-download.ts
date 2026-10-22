@@ -61,7 +61,8 @@ function request(url: URL, address: { address: string; family: number }, options
       url,
       {
         method: "GET",
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Vertice/1.0; robô de editais e provas oficiais; +https://vertice.app)", Accept: options.accept },
+        // ASCII only: some government firewalls reject header values with accents ("Request Rejected").
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Vertice/1.0; robo de editais e provas oficiais; +https://vertice.app)", Accept: options.accept },
         // Newer Node asks for every address (all: true) and expects a list back.
         lookup: ((_host: string, opts: { all?: boolean }, cb: (...args: unknown[]) => void) =>
           opts.all ? cb(null, [{ address: address.address, family: address.family }]) : cb(null, address.address, address.family)) as never,

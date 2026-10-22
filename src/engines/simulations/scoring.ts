@@ -21,9 +21,15 @@ export const ruleSubjectSchema = z.object({
   questions: z.number().int().positive().max(500).nullable().optional(),
   /** Minimum share 0..1 of the subject's maximum. */
   minShare: z.number().min(0).max(1).nullable().optional(),
+  /** Exam day of the subject, when the edital splits the exam into days. */
+  day: z.number().int().min(1).max(10).nullable().optional(),
 });
 export const ruleSubjectsSchema = z.array(ruleSubjectSchema).max(40);
 export type RuleSubject = z.infer<typeof ruleSubjectSchema>;
+
+/** Official duration of each exam day, from the edital. */
+export const ruleDaysSchema = z.array(z.object({ day: z.number().int().min(1).max(10), durationMinutes: z.number().int().min(10).max(900) })).max(10);
+export type RuleDay = z.infer<typeof ruleDaysSchema>[number];
 
 export interface ScoringRuleInput {
   mode: "RIGHT_COUNT" | "PENALTY";

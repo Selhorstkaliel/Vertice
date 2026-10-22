@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { combineRuns, estimateLines, paragraphsOf, type CorrectionRun, type RubricCriterion } from "@/engines/essays/correction";
-import { structuredCall } from "@/modules/ai/claude";
+import { essayModel, essayStructuredCall } from "@/modules/ai/structured";
 import {
   CORRECTION_INSTRUCTIONS,
   REWRITE_INSTRUCTIONS,
@@ -38,7 +38,7 @@ export interface CorrectionRequest {
 export async function runCorrection(req: CorrectionRequest) {
   const lines = estimateLines(req.text, req.rubric.charsPerLine);
   const call = () =>
-    structuredCall({
+    essayStructuredCall({
       feature: "ESSAY_CORRECTION",
       userId: req.userId,
       refId: req.essayId,
@@ -70,7 +70,7 @@ export async function correctEssay(userId: string, essayId: string) {
   const result = await runCorrection({
     userId,
     essayId,
-    model: env.ESSAY_MODEL,
+    model: essayModel("correction"),
     rubric: { ...rubric, competitionName: rubric.competition.name, criteria: parseCriteria(rubric.criteria) },
     theme: essay.theme,
     text: essay.text,
@@ -111,11 +111,11 @@ export async function correctParagraphRewrite(input: {
   original: string;
   rewrite: string;
 }) {
-  return structuredCall({
+  return essayStructuredCall({
     feature: "ESSAY_REWRITE",
     userId: input.userId,
     refId: input.essayId,
-    model: env.ESSAY_REWRITE_MODEL,
+    model: essayModel("rewrite"),
     effort: "low",
     maxTokens: REWRITE_MAX_TOKENS,
     system: [REWRITE_INSTRUCTIONS],

@@ -28,7 +28,7 @@ export function getClaudeClient() {
 export class AiOutputError extends Error {
   constructor(
     message: string,
-    readonly reason: "invalid" | "refusal" | "truncated" | "unavailable",
+    readonly reason: "invalid" | "refusal" | "truncated" | "unavailable" | "quota",
   ) {
     super(message);
     this.name = "AiOutputError";

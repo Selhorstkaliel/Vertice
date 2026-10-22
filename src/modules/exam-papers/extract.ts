@@ -6,7 +6,7 @@ import { loadFile, removeFile, saveFile } from "@/lib/storage";
 import { correctKeyFromText, keyFirstNumber, reconcileWithKey, type PaperSection } from "@/engines/questions/answer-key";
 import { missingBaseText, normalizeLabel, type DraftOption } from "@/engines/questions/draft-check";
 import { numbersMissingFromSource, padBox } from "@/engines/questions/rich-text";
-import { describeQuestionAiError, GEMINI_FILE_TTL_MS, generateJson, QuestionAiError, uploadPdf } from "@/modules/ai/gemini";
+import { describeQuestionAiError, GEMINI_FILE_TTL_MS, generateJson, QuestionAiError, uploadPdf, reusableAiFile } from "@/modules/ai/documents";
 import { loadCompetitionCatalog, matchSubject } from "./catalog";
 import { cropImage, pdfPageCount, pdfPageTexts, refineFigureBox, renderPage } from "./pdf";
 import {
@@ -48,7 +48,7 @@ async function renewLease(paperId: string, patch: Prisma.ExamPaperUpdateInput = 
 }
 
 async function ensureUploaded(paper: { id: string; filePath: string; title: string; geminiFileUri: string | null; geminiFileAt: Date | null }, force = false) {
-  if (!force && paper.geminiFileUri && paper.geminiFileAt && Date.now() - paper.geminiFileAt.getTime() < GEMINI_FILE_TTL_MS) return paper.geminiFileUri;
+  if (!force && paper.geminiFileUri && reusableAiFile(paper.geminiFileUri) && paper.geminiFileAt && Date.now() - paper.geminiFileAt.getTime() < GEMINI_FILE_TTL_MS) return paper.geminiFileUri;
   const { uri, uploadedAt } = await uploadPdf(await loadFile("provas", paper.filePath), paper.title);
   await db.examPaper.update({ where: { id: paper.id }, data: { geminiFileUri: uri, geminiFileAt: uploadedAt } });
   paper.geminiFileUri = uri;

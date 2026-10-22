@@ -45,6 +45,8 @@ export function zodToGemini(schema: z.ZodTypeAny): Record<string, unknown> {
       return zodToGemini(def.innerType as z.ZodTypeAny);
     case "ZodDefault":
       return zodToGemini(def.innerType as z.ZodTypeAny);
+    case "ZodEffects":
+      return zodToGemini(def.schema as z.ZodTypeAny);
     case "ZodObject": {
       const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
       return { type: "OBJECT", properties: Object.fromEntries(Object.entries(shape).map(([k, v]) => [k, zodToGemini(v as z.ZodTypeAny)])), required: Object.keys(shape) };

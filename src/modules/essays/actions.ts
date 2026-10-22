@@ -11,7 +11,8 @@ import { keyToDbDate, localNow, startOfWeek } from "@/lib/time";
 import { estimateLines, paragraphsOf } from "@/engines/essays/correction";
 import { DEFAULT_ESSAY_MINUTES } from "@/engines/essays/cadence";
 import { requireOnboardedUser } from "@/modules/auth/session";
-import { AiOutputError, claudeConfigured } from "@/modules/ai/claude";
+import { AiOutputError } from "@/modules/ai/claude";
+import { essayAiConfigured } from "@/modules/ai/structured";
 import { findPlacements } from "@/modules/plan/service";
 import { correctEssay, correctParagraphRewrite } from "./correct";
 import { cadenceFor, essayEnrollments, essayQuota, parseCriteria, publishedRubricFor, syncEssayFlashcards } from "./service";
@@ -36,6 +37,7 @@ function aiFailure(err: unknown) {
   if (err instanceof AiOutputError) {
     if (err.reason === "unavailable") return "A correção automática não está configurada neste servidor.";
     if (err.reason === "refusal") return "A IA não conseguiu corrigir este texto. Revise o conteúdo e tente de novo.";
+    if (err.reason === "quota") return "O limite de uso da IA foi atingido por agora. Tente de novo mais tarde; sua cota não foi usada.";
     return "A correção veio em formato inválido duas vezes e foi descartada. Tente de novo em alguns minutos; sua cota não foi usada.";
   }
   if (err instanceof Anthropic.RateLimitError) return "O serviço de IA está com muitas solicitações agora. Tente de novo em instantes; sua cota não foi usada.";
@@ -95,7 +97,7 @@ export async function submitEssayAction(id: string): Promise<ActionResult<{ id: 
   return runAction(async () => {
     const user = await essayUser();
     if (!user) return fail("A área de redação ainda não está disponível.");
-    if (!claudeConfigured()) return fail("A correção automática não está configurada neste servidor.");
+    if (!essayAiConfigured()) return fail("A correção automática não está configurada neste servidor.");
     const essay = await db.essay.findFirst({ where: { id, userId: user.id }, select: { id: true, status: true, text: true, rubric: { select: { publishedAt: true } } } });
     if (!essay) return fail("Redação não encontrada.");
     if (essay.status === "CORRECTED") return ok({ id }, "Esta redação já foi corrigida.");
@@ -154,7 +156,7 @@ export async function rewriteParagraphAction(input: z.input<typeof paragraphSche
   return runAction(async () => {
     const user = await essayUser();
     if (!user) return fail("A área de redação ainda não está disponível.");
-    if (!claudeConfigured()) return fail("A correção automática não está configurada neste servidor.");
+    if (!essayAiConfigured()) return fail("A correção automática não está configurada neste servidor.");
     const parsed = paragraphSchema.safeParse(input);
     if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Dados inválidos.");
     const essay = await db.essay.findFirst({

@@ -1,9 +1,14 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { ruleSubjectsSchema, type RuleSubject, type ScoringRuleInput } from "@/engines/simulations/scoring";
+import { ruleDaysSchema, ruleSubjectsSchema, type RuleDay, type RuleSubject, type ScoringRuleInput } from "@/engines/simulations/scoring";
 
 export function parseRuleSubjects(value: unknown): RuleSubject[] {
   const parsed = ruleSubjectsSchema.safeParse(value);
+  return parsed.success ? parsed.data : [];
+}
+
+export function parseRuleDays(value: unknown): RuleDay[] {
+  const parsed = ruleDaysSchema.safeParse(value);
   return parsed.success ? parsed.data : [];
 }
 
@@ -15,6 +20,7 @@ const ruleSelect = {
   wrongPenalty: true,
   durationMinutes: true,
   subjects: true,
+  days: true,
   minTotalShare: true,
   cutoffScore: true,
   maxScore: true,
@@ -32,7 +38,7 @@ export async function listRules(competitionId?: string) {
     select: { ...ruleSelect, competition: { select: { name: true } } },
     orderBy: [{ competition: { name: "asc" } }, { year: "desc" }],
   });
-  return rows.map((r) => ({ ...r, subjects: parseRuleSubjects(r.subjects) }));
+  return rows.map((r) => ({ ...r, subjects: parseRuleSubjects(r.subjects), days: parseRuleDays(r.days) }));
 }
 
 /**
@@ -47,7 +53,7 @@ export async function ruleForCompetition(competitionId: string) {
     select: ruleSelect,
     orderBy: [{ year: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
   });
-  return rule ? { ...rule, subjects: parseRuleSubjects(rule.subjects) } : null;
+  return rule ? { ...rule, subjects: parseRuleSubjects(rule.subjects), days: parseRuleDays(rule.days) } : null;
 }
 
 export function toEngineRule(rule: { mode: ScoringRuleInput["mode"]; wrongPenalty: number | null; subjects: RuleSubject[]; minTotalShare: number | null }): ScoringRuleInput {

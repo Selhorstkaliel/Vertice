@@ -23,6 +23,9 @@ coverage/
 # Provas importadas, páginas renderizadas e figuras das questões
 /storage/
 
+# Credenciais pessoais do ChatGPT, criptografadas e restritas a esta instalação
+/.chatgpt/
+
 # Arquivos locais
 dev.log
 # Relatórios de npm run redacao:calibrar (contêm redações)

@@ -13,7 +13,8 @@ import { formatDateShort, formatNumber, formatPercent } from "@/lib/format";
 import { ESSAY_STATUS_LABEL } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { cadenceFor, essayEnrollments, essayHistory, essayQuota, themeOfTheWeek } from "@/modules/essays/service";
-import { ESSAY_PRIVACY_NOTE } from "@/modules/essays/privacy";
+import { essayPrivacyNote } from "@/modules/essays/privacy";
+import { essayProvider } from "@/modules/ai/structured";
 
 export const metadata: Metadata = { title: "Redação" };
 
@@ -187,7 +188,7 @@ export default async function EssaysPage() {
       </section>
 
       <Notice tone="neutral" title="Privacidade">
-        {ESSAY_PRIVACY_NOTE}
+        {essayPrivacyNote(essayProvider())}
       </Notice>
     </div>
   );

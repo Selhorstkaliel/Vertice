@@ -8,8 +8,10 @@
  *   npm run editais -- arquivo <slug> <arquivo.pdf> --fonte=URL [--titulo="..."] [--avisar]
  *   npm run editais -- dou [--data=AAAA-MM-DD]                 # fonte complementar: Diário Oficial (INLABS)
  *
- * Rode `verificar` (e depois `continuar`) por um agendador do servidor, poucas vezes ao dia:
- *   0 7,13,19 * * *  cd /app && npm run editais -- verificar && npm run editais -- continuar
+ *   npm run editais -- auto                                    # verificar + continuar (até 5 leituras); o que `npm run dev`/`start` roda de hora em hora
+ *
+ * `npm run dev` e `npm start` rodam `auto` sozinhos (EDITAIS_AUTO=off desliga). Sem eles, use um agendador:
+ *   0 7,13,19 * * *  cd /app && npm run editais -- auto
  * Nada é publicado ao aluno sem revisão em /admin/editais; o aviso imediato traz só o título e o link oficial.
  */
 import { readFile } from "node:fs/promises";
@@ -42,12 +44,29 @@ async function main() {
     }
     case "continuar": {
       if (!editalAiConfigured()) {
-        log("Configure GEMINI_API_KEY e EDITAL_AI_MODELS para ler editais.");
+        log("Conecte a IA para ler editais: Configurações › Inteligência artificial (modo pessoal) ou GEMINI_API_KEY e EDITAL_AI_MODELS.");
         process.exitCode = 1;
         break;
       }
       const results = await readPending(log, { documentId: opt("documento") });
       log(`\n${results.filter((r) => r.done).length} de ${results.length} documentos lidos. Revise em /admin/editais.`);
+      break;
+    }
+    case "auto": {
+      // Started every hour by scripts/next.mjs while the Vértice runs: only due sources are visited.
+      if ((await db.editalSource.count()) === 0) {
+        const r = await syncSources();
+        log(`Fontes criadas: ${r.created}.`);
+      }
+      const reports = await checkAllSources(log);
+      const fresh = reports.reduce((a, r) => a + r.new, 0);
+      if (reports.length) log(`${reports.length} fontes verificadas, ${fresh} documentos novos, ${reports.filter((r) => r.error).length} com erro.`);
+      if (editalAiConfigured()) {
+        const results = await readPending(log, { limit: 5 });
+        if (results.length) log(`${results.filter((r) => r.done).length} de ${results.length} documentos lidos. Revise em /admin/editais.`);
+      } else if (await db.editalDocument.count({ where: { status: "NEW" } })) {
+        log("Há editais esperando leitura: conecte a IA (Configurações › Inteligência artificial).");
+      }
       break;
     }
     case "situacao": {
@@ -76,7 +95,7 @@ async function main() {
       break;
     }
     default:
-      log("Comandos: fontes, verificar, continuar, situacao, arquivo, dou. Veja o cabeçalho de scripts/editais.ts.");
+      log("Comandos: fontes, verificar, continuar, auto, situacao, arquivo, dou. Veja o cabeçalho de scripts/editais.ts.");
       process.exitCode = command ? 1 : 0;
   }
 }

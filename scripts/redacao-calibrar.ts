@@ -19,7 +19,8 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { calibrationStats, pickModel, type CalibrationCase } from "@/engines/essays/calibration";
 import { addUsage, emptyUsage, estimateCostUsd } from "@/modules/ai/usage";
-import { claudeConfigured } from "@/modules/ai/claude";
+import { essayAiConfigured, essayProvider } from "@/modules/ai/structured";
+import { chatGptModel } from "@/modules/ai/chatgpt";
 import { runCorrection } from "@/modules/essays/correct";
 import { parseCriteria } from "@/modules/essays/service";
 
@@ -41,11 +42,12 @@ async function main() {
     console.error("Uso: npm run redacao:calibrar -- --arquivo=<json> --concurso=<slug> [--modelos=a,b] [--limite=0.1] [--fora-da-faixa=0.2]");
     process.exit(2);
   }
-  if (!claudeConfigured()) {
-    console.error("ANTHROPIC_API_KEY não configurada.");
+  if (!essayAiConfigured()) {
+    console.error("IA da redação não configurada. No modo pessoal, execute npm run chatgpt -- conectar; nos demais, configure a chave do provedor.");
     process.exit(2);
   }
-  const models = (arg("modelos") ?? "claude-sonnet-5-5,claude-opus-5-5").split(",").map((m) => m.trim()).filter(Boolean);
+  const defaultModels = essayProvider() === "chatgpt" ? chatGptModel() : essayProvider() === "gemini" ? env.ESSAY_GEMINI_MODELS.join(",") : "claude-sonnet-5-5,claude-opus-5-5";
+  const models = (arg("modelos") ?? defaultModels).split(",").map((m) => m.trim()).filter(Boolean);
   const maxErrorShare = Number(arg("limite") ?? "0.1");
   const maxOutsideShare = Number(arg("fora-da-faixa") ?? "0.2");
 
@@ -106,7 +108,11 @@ async function main() {
   console.log(`\nLimites: erro médio ≤ ${(maxErrorShare * 100).toFixed(0)}% da nota máxima e nota humana fora da faixa em ≤ ${(maxOutsideShare * 100).toFixed(0)}% das redações.`);
   console.log(
     chosen
-      ? `Modelo mais barato que passou: ${chosen.model}. Defina ESSAY_MODEL=${chosen.model}${env.ESSAY_MODEL === chosen.model ? " (já é o atual)" : ""}.`
+      ? essayProvider() === "chatgpt"
+        ? `Modelo que passou: ${chosen.model}. Para usá-lo, defina CHATGPT_MODEL=${chosen.model}. A comparação de preços de API não se aplica à franquia do plano.`
+        : essayProvider() === "gemini"
+        ? `Modelo mais barato que passou: ${chosen.model}. Coloque-o primeiro em ESSAY_GEMINI_MODELS${env.ESSAY_GEMINI_MODELS[0] === chosen.model ? " (já é o atual)" : ""}.`
+        : `Modelo mais barato que passou: ${chosen.model}. Defina ESSAY_MODEL=${chosen.model}${env.ESSAY_MODEL === chosen.model ? " (já é o atual)" : ""}.`
       : "Nenhum modelo passou nos limites. Mantenha ESSAYS_ENABLED desligado em produção e revise a rubrica ou os prompts.",
   );
 

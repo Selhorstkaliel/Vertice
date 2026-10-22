@@ -51,7 +51,7 @@ export default async function AdminEditaisPage({ searchParams }: { searchParams:
           </ul>
         </Notice>
       )}
-      {!editalAiConfigured() && <Notice tone="info">Leitura com IA desligada: configure GEMINI_API_KEY (e EDITAL_AI_MODELS). A verificação e os avisos com link funcionam sem ela.</Notice>}
+      {!editalAiConfigured() && <Notice tone="info">Conecte a IA para ler editais. No modo pessoal: Admin › Conexão de IA (/admin/ia). Com Gemini: configure GEMINI_API_KEY e EDITAL_AI_MODELS. A verificação e os avisos com link funcionam sem IA.</Notice>}
 
       <section aria-labelledby="docs-title" className="flex flex-col gap-4">
         <SectionTitle>

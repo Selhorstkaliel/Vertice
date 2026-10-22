@@ -44,8 +44,9 @@ function makePdf(pages: string[][]): Buffer {
 
 const EDITAL = makePdf([
   ["EDITAL DE ABERTURA DO CONCURSO DE TESTE 2027", "Banca organizadora: Fundacao de Teste.", "Cargo: Aluno, 100 vagas."],
-  ["CRONOGRAMA", "Inscricoes de 10/11/2026 a 20/11/2026.", "Prova objetiva em 10/05/2027.", "Recursos ate 15/05/2027."],
+  ["CRONOGRAMA", "Inscricoes de 10/11/2026 a 20/11/2026.", "Prova objetiva em 10/05/2027.", "Recursos ate 15/05/2027.", "Inspecao de saude de 01/06/2027 a 05/06/2027."],
   ["DA PROVA", "Matematica: 20 questoes, peso 2.", "Portugues: 20 questoes, peso 1.", "Total de 40 questoes.", "Cada questao errada anula uma questao certa."],
+  ["TESTE DE APTIDAO FISICA", "Corrida de 12 minutos: masculino 2.400 metros, feminino 2.000 metros.", "Flexao de bracos: masculino 20 repeticoes, feminino 10 repeticoes."],
 ]);
 const RETIFICACAO = makePdf([["1a RETIFICACAO DO EDITAL DO CONCURSO DE TESTE 2027", "Onde se le prova objetiva em 10/05/2027,", "leia-se prova objetiva em 17/05/2027."]]);
 
@@ -93,19 +94,29 @@ const geminiServer = http.createServer(async (req, res) => {
     }
     if (prompt.startsWith("As disciplinas")) {
       return retificacao
-        ? { disciplinas: [], pontuacao: null }
+        ? { disciplinas: [], dias: [], pontuacao: null }
         : {
             disciplinas: [
-              { nome: "Matemática", questoes: 20, peso: 2, notaMinima: null, pagina: 3, trecho: "Matematica: 20 questoes, peso 2." },
-              { nome: "Língua Portuguesa", questoes: 20, peso: 1, notaMinima: null, pagina: 3, trecho: "Portugues: 20 questoes, peso 1." },
+              { nome: "Matemática", questoes: 20, peso: 2, notaMinima: null, dia: null, pagina: 3, trecho: "Matematica: 20 questoes, peso 2." },
+              { nome: "Língua Portuguesa", questoes: 20, peso: 1, notaMinima: null, dia: null, pagina: 3, trecho: "Portugues: 20 questoes, peso 1." },
             ],
+            dias: [],
             pontuacao: { modo: "DESCONTO", descontoPorErro: 1, notaMinimaTotal: null, notaMaxima: null, pagina: 3, trecho: "Cada questao errada anula uma questao certa." },
           };
     }
-    if (prompt.startsWith("As etapas")) return { etapas: [] };
+    if (prompt.startsWith("As etapas")) {
+      return retificacao
+        ? { etapas: [] }
+        : { etapas: [{ nome: "Inspeção de saúde", ordem: 3, eliminatoria: true, descricao: "Exames médicos.", cronograma: [{ evento: "Inspeção de saúde", inicio: "2027-06-01", fim: "2027-06-05" }], pagina: 2, trecho: "Inspecao de saude de 01/06/2027 a 05/06/2027." }] };
+    }
     if (prompt.startsWith("O conteúdo")) return { conteudo: [] };
     if (prompt.startsWith("Os critérios")) return { redacao: null };
-    if (prompt.startsWith("Os índices")) return { taf: [] };
+    if (prompt.startsWith("Os índices")) {
+      const t = (prova: string, sexo: string, indice: string, unidade: string) => ({ prova, sexo, faixaEtaria: null, indice, unidade, pagina: 4, trecho: "Corrida de 12 minutos: masculino 2.400 metros" });
+      return retificacao
+        ? { taf: [] }
+        : { taf: [t("Corrida de 12 minutos", "MASCULINO", "2.400", "metros"), t("Corrida de 12 minutos", "FEMININO", "2.000", "metros"), t("Flexão de braços", "MASCULINO", "20", "repetições"), t("Flexão de braços", "FEMININO", "10", "repetições")] };
+    }
     if (prompt.startsWith("Documentos exigidos")) return { documentos: [] };
     return { tipo: retificacao ? "RETIFICACAO" : "EDITAL" };
   })();
@@ -122,6 +133,8 @@ Object.assign(process.env, {
   GEMINI_BASE_URL: `http://127.0.0.1:${geminiPort}`,
   EDITAL_AI_MODELS: "gemini-mock",
   EDITAIS_ALLOW_LOCAL_SOURCES: "on",
+  // The personal ChatGPT plan would take priority over the mocked Gemini.
+  CHATGPT_PERSONAL_MODE: "off",
   NODE_ENV: "test",
 });
 const { db } = await import("@/lib/db");
@@ -130,6 +143,8 @@ const { readPending } = await import("@/modules/editais/read");
 const { reviewField, reviewChange, publishDocument } = await import("@/modules/editais/review");
 const { parseFields } = await import("@/modules/editais/published");
 const { removeFile } = await import("@/lib/storage");
+const { syncStageItems } = await import("@/modules/military/stages");
+const { syncTafFromEdital } = await import("@/modules/military/service");
 
 /* ── checks ───────────────────────────────────────────────────────── */
 
@@ -150,13 +165,13 @@ const competition = await db.competition.create({
     organization: "Teste",
     kind: "MILITARY",
     subjects: { create: subjects.map((s, order) => ({ subjectId: s.id, order })) },
-    stages: { create: [{ name: "Inscrição", order: 1 }, { name: "Prova objetiva", order: 2 }] },
+    stages: { create: [{ name: "Inscrição", order: 1 }, { name: "Prova objetiva", order: 2 }, { name: "Inspeção de saúde", order: 3 }] },
   },
 });
 const admin = await db.user.create({ data: { email: `admin-${tag}@e2e.test`, passwordHash: "x", name: "Admin E2E", isAdmin: true } });
 const student = await db.user.create({ data: { email: `aluno-${tag}@e2e.test`, passwordHash: "x", name: "Aluno E2E", onboardedAt: new Date(), profile: { create: {} } } });
 const enrollment = await db.studentCompetition.create({
-  data: { userId: student.id, competitionId: competition.id, isPrimary: true, customExamDate: new Date("2027-06-01T00:00:00Z"), stages: { create: [{ name: "Prova objetiva", order: 1 }] } },
+  data: { userId: student.id, competitionId: competition.id, isPrimary: true, customExamDate: new Date("2027-06-01T00:00:00Z"), stages: { create: [{ name: "Prova objetiva", order: 1 }, { name: "Inspeção de saúde", order: 2 }] } },
 });
 const source = await db.editalSource.create({ data: { competitionId: competition.id, url: `${BASE}/concursos`, kind: "LINK_LIST" } });
 const notices = () => db.notification.findMany({ where: { userId: student.id }, orderBy: { createdAt: "asc" } });
@@ -210,6 +225,21 @@ try {
   check("rejected field not applied", pub.applied === Object.keys(fields).length - 1);
   const e1 = await db.studentCompetition.findUniqueOrThrow({ where: { id: enrollment.id } });
   check("student's own exam date kept, and they are asked", e1.keepCustomExamDate && e1.customExamDate?.toISOString().slice(0, 10) === "2027-06-01");
+  const health = await db.competitionStage.findFirstOrThrow({ where: { competitionId: competition.id, name: "Inspeção de saúde" } });
+  check("stage dates come from its cronograma", health.startDate?.toISOString().slice(0, 10) === "2027-06-01" && health.endDate?.toISOString().slice(0, 10) === "2027-06-05");
+  const studentHealth = await db.studentStage.findFirstOrThrow({ where: { studentCompetitionId: enrollment.id, name: "Inspeção de saúde" } });
+  check("student's stage gets the edital date", studentHealth.date?.toISOString().slice(0, 10) === "2027-06-01" && studentHealth.dateFromCatalog);
+  await db.studentStage.update({ where: { id: studentHealth.id }, data: { date: new Date("2027-06-03T00:00:00Z"), dateFromCatalog: false } });
+  await syncStageItems(student.id);
+  check("a date the student set is never replaced", (await db.studentStage.findUniqueOrThrow({ where: { id: studentHealth.id } })).date?.toISOString().slice(0, 10) === "2027-06-03");
+  const standards = await db.competitionTafStandard.findMany({ where: { competitionId: competition.id } });
+  const run = standards.find((x) => x.sex === "MALE" && /Corrida/.test(x.test));
+  check("TAF indices stored per sex and interpreted", standards.length === 4 && run?.unit === "METERS" && run.target === 2400 && run.betterWhen === "HIGHER");
+  check("TAF waits for the student's sex", (await syncTafFromEdital(student.id, null)) === 0);
+  const createdTests = await syncTafFromEdital(student.id, "FEMALE");
+  const tests = await db.militaryTest.findMany({ where: { userId: student.id }, orderBy: { name: "asc" } });
+  check("TAF filled with the edital targets for the student's sex", createdTests === 2 && tests.map((x) => `${x.name}=${x.targetValue}`).join(",") === "Corrida de 12 minutos=2000,Flexão de braços=10", tests.map((x) => `${x.name}=${x.targetValue}`).join(","));
+  check("TAF fill is not duplicated", (await syncTafFromEdital(student.id, "FEMALE")) === 0);
   const n2 = await notices();
   check("update notice and official-date question sent", n2.some((n) => n.type === "EDITAL_UPDATE" && /atualizados/.test(n.title)) && n2.some((n) => /Data oficial da prova publicada/.test(n.title)));
 
@@ -229,7 +259,7 @@ try {
   const c2 = await db.competition.findUniqueOrThrow({ where: { id: competition.id } });
   check("retificação moved the exam date", c2.examDate?.toISOString().slice(0, 10) === "2027-05-17");
   check("highlighted before → after for students", pub2.dateChanges.some((d) => /10\/05\/2027 → 17\/05\/2027/.test(d)) && (await notices()).some((n) => /10\/05\/2027 → 17\/05\/2027/.test(n.body ?? "")));
-  const stage = await db.studentStage.findFirstOrThrow({ where: { studentCompetitionId: enrollment.id } });
+  const stage = await db.studentStage.findFirstOrThrow({ where: { studentCompetitionId: enrollment.id, name: "Prova objetiva" } });
   check("exam stage follows the official date", stage.date?.toISOString().slice(0, 10) === "2027-05-17");
 
   // 6. A broken source does not fail silently.

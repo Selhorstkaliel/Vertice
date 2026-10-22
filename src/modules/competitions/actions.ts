@@ -388,9 +388,11 @@ export async function updateStageAction(stageId: string, input: z.input<typeof s
     const user = await requireOnboardedUser();
     const parsed = stageSchema.safeParse(input);
     if (!parsed.success) return fromZodError(parsed.error);
-    const stage = await db.studentStage.findFirst({ where: { id: stageId, enrollment: { userId: user.id } }, select: { id: true, enrollment: { select: { competitionId: true } } } });
+    const stage = await db.studentStage.findFirst({ where: { id: stageId, enrollment: { userId: user.id } }, select: { id: true, date: true, enrollment: { select: { competitionId: true } } } });
     if (!stage) return fail("Etapa não encontrada.");
-    await db.studentStage.update({ where: { id: stageId }, data: { status: parsed.data.status, date: parsed.data.date, notes: parsed.data.notes?.trim() || null } });
+    // A date the student changes is theirs: the edital no longer moves it.
+    const dateChanged = (parsed.data.date?.getTime() ?? null) !== (stage.date?.getTime() ?? null);
+    await db.studentStage.update({ where: { id: stageId }, data: { status: parsed.data.status, date: parsed.data.date, notes: parsed.data.notes?.trim() || null, ...(dateChanged ? { dateFromCatalog: false } : {}) } });
     revalidateCompetitions(stage.enrollment.competitionId);
     revalidatePath("/militar");
     revalidatePath("/calendario");

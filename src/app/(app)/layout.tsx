@@ -8,6 +8,8 @@ import { requireOnboardedUser } from "@/modules/auth/session";
 import { competitionTitle, effectiveExamDate } from "@/modules/competitions/queries";
 import { PLAN_ITEM_KIND_LABEL } from "@/lib/labels";
 import { essaysEnabled } from "@/lib/plan-limits";
+import { chatGptConfigured, personalChatGpt } from "@/modules/ai/chatgpt-auth";
+import { AiConnectPrompt } from "@/components/ai/chatgpt-connection";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireOnboardedUser();
@@ -70,6 +72,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }}
       runningSession={runningSession}
     >
+      {/* Each student's own installation: ask for their ChatGPT until it is connected. */}
+      {personalChatGpt() && !chatGptConfigured() && <AiConnectPrompt />}
       {children}
     </AppShell>
   );

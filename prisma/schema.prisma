@@ -265,6 +265,17 @@ enum CalendarEventType {
   CUSTOM
 }
 
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum TafSex {
+  MALE
+  FEMALE
+  BOTH
+}
+
 enum PhysicalModality {
   RUN
   PULL_UP
@@ -404,6 +415,8 @@ model Profile {
   works                 Boolean    @default(false)
   studiesCollege        Boolean    @default(false)
   physicalPrep          Boolean    @default(false)
+  // Asked on the TAF tab: the edital's physical test indices differ by sex.
+  sex                   Sex?
   timezone              String     @default("America/Sao_Paulo")
   dailyStudyLimitMin    Int        @default(360)
   maxSessionMin         Int        @default(90)
@@ -504,6 +517,7 @@ model Competition {
   examBoard       ExamBoard?           @relation(fields: [examBoardId], references: [id], onDelete: SetNull)
   owner           User?                @relation("CompetitionOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   stages          CompetitionStage[]
+  tafStandards    CompetitionTafStandard[]
   subjects        CompetitionSubject[]
   topics          CompetitionTopic[]
   enrollments     StudentCompetition[]
@@ -532,6 +546,9 @@ model CompetitionStage {
   name          String
   order         Int
   description   String?
+  // From the published edital's cronograma: when the stage happens.
+  startDate     DateTime? @db.Date
+  endDate       DateTime? @db.Date
 
   competition Competition            @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   items       CompetitionStageItem[]
@@ -596,6 +613,8 @@ model StudentStage {
   order                Int
   status               StageStatus @default(PENDING)
   date                 DateTime?   @db.Date
+  // True while the date is still the edital's; false once the student sets their own.
+  dateFromCatalog      Boolean     @default(false)
   notes                String?
 
   enrollment StudentCompetition @relation(fields: [studentCompetitionId], references: [id], onDelete: Cascade)
@@ -1093,6 +1112,8 @@ model Simulation {
   // Exam mode: official time, blank answers allowed, scored by the competition rule.
   examMode         Boolean           @default(false)
   scoringRuleId    String?
+  // "Simulado da prova real": which part of the real exam this is ("1º dia", or the booklet).
+  section          String?
   createdAt        DateTime          @default(now())
 
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1310,13 +1331,46 @@ model MilitaryTest {
   // Date of this TAF test, when known; otherwise the TAF stage date is used.
   testDate             DateTime?        @db.Date
   notes                String?
+  // Created from the edital's index (CompetitionTafStandard); never duplicated.
+  standardId           String?
   createdAt            DateTime         @default(now())
 
-  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  enrollment StudentCompetition?  @relation(fields: [studentCompetitionId], references: [id], onDelete: SetNull)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollment StudentCompetition?     @relation(fields: [studentCompetitionId], references: [id], onDelete: SetNull)
+  standard   CompetitionTafStandard? @relation(fields: [standardId], references: [id], onDelete: SetNull)
   results    MilitaryTestResult[]
 
   @@index([userId])
+}
+
+/**
+ * One index of the physical test (TAF) as printed in the published edital,
+ * per sex and age range. The raw text is kept; the interpreted target is
+ * what pre-fills the student's tests.
+ */
+model CompetitionTafStandard {
+  id             String             @id @default(cuid())
+  competitionId  String
+  year           Int?
+  test           String
+  sex            TafSex
+  ageRange       String?
+  index          String
+  unitText       String
+  modality       PhysicalModality
+  unit           MeasureUnit?
+  betterWhen     BetterWhen?
+  target         Float?
+  distanceMeters Int?
+  order          Int                @default(0)
+  sourceUrl      String?
+  verification   VerificationStatus @default(VERIFIED)
+  createdAt      DateTime           @default(now())
+
+  competition Competition    @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  tests       MilitaryTest[]
+
+  @@index([competitionId, sex])
 }
 
 model MilitaryTestResult {
@@ -1528,8 +1582,10 @@ model ScoringRule {
   wrongPenalty    Float?
   // Official total time of the objective exam.
   durationMinutes Int?
-  /// [{ subjectId, weight, questions, minShare }] — minShare 0..1 of the subject's maximum.
+  /// [{ subjectId, weight, questions, minShare, day }] — minShare 0..1 of the subject's maximum.
   subjects        Json
+  /// [{ day, durationMinutes }] — official time of each exam day, when the edital splits the exam.
+  days            Json?
   // Minimum share 0..1 of the total maximum, when the edital sets one.
   minTotalShare   Float?
   // Published cut-off, as "cutoffScore of maxScore points".

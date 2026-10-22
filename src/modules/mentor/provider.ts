@@ -1,7 +1,9 @@
 import "server-only";
 import { env, isProduction } from "@/lib/env";
+import { chatGptConfigured, personalChatGpt } from "@/modules/ai/chatgpt-auth";
+import { chatGptModel } from "@/modules/ai/chatgpt";
 
-export type MentorProviderId = "anthropic" | "gemini" | "openai-compatible";
+export type MentorProviderId = "anthropic" | "gemini" | "openai-compatible" | "chatgpt";
 
 export interface MentorProvider {
   id: MentorProviderId;
@@ -17,6 +19,7 @@ export interface MentorProvider {
 const GEMINI_OPENAI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai";
 
 export function mentorProvider(): MentorProvider {
+  if (personalChatGpt()) return { id: "chatgpt", label: "OpenAI (seu plano ChatGPT)", model: chatGptModel(), configured: chatGptConfigured(), baseUrl: null, apiKey: null };
   switch (env.MENTOR_PROVIDER) {
     case "gemini":
       return {
@@ -55,6 +58,7 @@ export function mentorProvider(): MentorProvider {
 
 /** Student-facing sentence about where Mentor conversations are sent. */
 export function mentorPrivacyNote(provider: MentorProvider = mentorProvider()) {
+  if (provider.id === "chatgpt") return "Suas mensagens e os dados consultados são enviados à OpenAI usando a franquia do seu plano ChatGPT conectado. Gerencie o uso em https://chatgpt.com/#settings/Usage. A aplicação não acessa seu histórico de conversas do ChatGPT.";
   if (provider.id === "gemini") {
     return "Suas mensagens e os dados consultados em cada resposta são enviados ao Google (Gemini) para gerar a resposta. No plano gratuito da API do Gemini, o Google pode usar esse conteúdo para melhorar os próprios produtos.";
   }

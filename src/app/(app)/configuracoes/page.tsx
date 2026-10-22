@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader } from "@/components/ui/display";
+import { headers } from "next/headers";
+import { Notice, PageHeader } from "@/components/ui/display";
+import { AiFeatureList, ChatGptConnection } from "@/components/ai/chatgpt-connection";
+import { chatGptStatus } from "@/modules/ai/chatgpt-status";
+import { CALLBACK_RESULT, type CallbackResult } from "@/modules/ai/chatgpt-results";
 import { NotificationPreferenceSwitch } from "@/components/notifications/notification-controls";
 import {
   AccountForm,
@@ -23,6 +27,7 @@ export const metadata: Metadata = { title: "Configurações" };
 const SECTIONS = [
   ["conta", "Conta"],
   ["aparencia", "Aparência"],
+  ["ia", "Inteligência artificial"],
   ["notificacoes", "Notificações"],
   ["rotina", "Rotina"],
   ["estudos", "Estudos"],
@@ -63,8 +68,10 @@ function Section({ id, title, description, children }: { id: string; title: stri
   );
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ resultado?: string }> }) {
   const user = await requireOnboardedUser();
+  const { resultado } = await searchParams;
+  const aiResult = resultado && resultado in CALLBACK_RESULT ? CALLBACK_RESULT[resultado as CallbackResult] : null;
   const p = user.profile;
   const tz = p.timezone;
   const [preferences, sessions, events, mentorCount] = await Promise.all([
@@ -73,6 +80,7 @@ export default async function SettingsPage() {
     db.securityEvent.findMany({ where: { userId: user.id }, select: { id: true, type: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 10 }),
     db.mentorMessage.count({ where: { userId: user.id } }),
   ]);
+  const ai = await chatGptStatus((await headers()).get("host"), "/configuracoes");
   const muted = new Set(preferences.filter((x) => !x.enabled).map((x) => x.type));
   const others = sessions.filter((s) => s.id !== user.sessionId).length;
 
@@ -101,6 +109,18 @@ export default async function SettingsPage() {
           <Section id="aparencia" title="Aparência" description="O tema fica salvo neste navegador.">
             <div className="max-w-xl">
               <ThemeForm />
+            </div>
+          </Section>
+
+          <Section id="ia" title="Inteligência artificial" description="Conecte sua conta do ChatGPT para ler e interpretar provas, corrigir redações, conversar com o Mentor e ler editais.">
+            <div className="flex max-w-2xl flex-col gap-6">
+              {aiResult && <Notice tone={aiResult.tone}>{aiResult.text}</Notice>}
+              {ai.personal ? (
+                <ChatGptConnection status={ai} returnTo="/configuracoes" />
+              ) : (
+                <p className="text-base text-fg-muted">Neste servidor, a IA usa as chaves configuradas pelo administrador.</p>
+              )}
+              <AiFeatureList features={ai.features} />
             </div>
           </Section>
 

@@ -6,8 +6,12 @@ import { z } from "zod";
  * PDF and the automatic checks can look the values up in the text.
  */
 
-const evidence = { pagina: z.number().int().min(1).max(2000), trecho: z.string().max(600) };
+/** Free text over its limit is cut, not rejected: one long description must not discard a whole group. */
+const text = (max: number) => z.preprocess((v) => (typeof v === "string" ? v.slice(0, max) : v), z.string().max(max));
+const evidence = { pagina: z.number().int().min(1).max(2000), trecho: text(600) };
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "data no formato AAAA-MM-DD");
+/** An optional deadline written as prose ("30 dias após a convocação") has no date: null, not a failed group. */
+const optionalDate = z.preprocess((v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null), isoDate.nullable());
 
 export const DATE_KEYS = [
   "inscricao_inicio",
@@ -44,45 +48,51 @@ export const DATE_LABEL: Record<DateKey, string> = {
 
 export const groupSchemas = {
   geral: z.object({
-    banca: z.object({ nome: z.string().max(200), ...evidence }).nullable(),
-    cargos: z.array(z.object({ nome: z.string().max(200), vagas: z.number().int().min(0).max(100000).nullable(), ...evidence })).max(60),
+    banca: z.object({ nome: text(200), ...evidence }).nullable(),
+    cargos: z.array(z.object({ nome: text(200), vagas: z.number().int().min(0).max(100000).nullable(), ...evidence })).max(60),
   }),
   datas: z.object({
-    datas: z.array(z.object({ chave: z.enum(DATE_KEYS), rotulo: z.string().max(200), data: isoDate, ...evidence })).max(60),
+    datas: z.array(z.object({ chave: z.enum(DATE_KEYS), rotulo: text(200), data: isoDate, ...evidence })).max(60),
   }),
   etapas: z.object({
-    etapas: z.array(z.object({ nome: z.string().max(200), ordem: z.number().int().min(1).max(30), eliminatoria: z.boolean(), descricao: z.string().max(600), ...evidence })).max(30),
+    etapas: z.array(z.object({
+      nome: text(200), ordem: z.number().int().min(1).max(30), eliminatoria: z.boolean(), descricao: text(600),
+      /** What happens in the stage and when, as in the edital's cronograma (presentation, exams, deadlines). */
+      cronograma: z.array(z.object({ evento: text(200), inicio: optionalDate, fim: optionalDate })).max(20),
+      ...evidence,
+    })).max(30),
   }),
   provas: z.object({
     disciplinas: z.array(
-      z.object({ nome: z.string().max(200), questoes: z.number().int().min(0).max(500).nullable(), peso: z.number().min(0).max(100).nullable(), notaMinima: z.number().min(0).max(10000).nullable(), ...evidence }),
+      z.object({ nome: text(200), questoes: z.number().int().min(0).max(500).nullable(), peso: z.number().min(0).max(100).nullable(), notaMinima: z.number().min(0).max(10000).nullable(), dia: z.number().int().min(1).max(10).nullable(), ...evidence }),
     ).max(40),
+    dias: z.array(z.object({ dia: z.number().int().min(1).max(10), duracaoMinutos: z.number().int().min(10).max(900), ...evidence })).max(10),
     pontuacao: z
       .object({ modo: z.enum(["ACERTOS", "DESCONTO"]), descontoPorErro: z.number().min(0).max(10).nullable(), notaMinimaTotal: z.number().min(0).max(100000).nullable(), notaMaxima: z.number().min(0).max(100000).nullable(), ...evidence })
       .nullable(),
   }),
   conteudo: z.object({
-    conteudo: z.array(z.object({ disciplina: z.string().max(200), itens: z.array(z.string().max(300)).max(300), ...evidence })).max(40),
+    conteudo: z.array(z.object({ disciplina: text(200), itens: z.array(text(300)).max(300), ...evidence })).max(40),
   }),
   redacao: z.object({
     redacao: z
       .object({
-        tipoTexto: z.string().max(300),
+        tipoTexto: text(300),
         linhasMin: z.number().int().min(0).max(200).nullable(),
         linhasMax: z.number().int().min(0).max(200).nullable(),
-        criterios: z.array(z.object({ nome: z.string().max(200), descricao: z.string().max(800), notaMaxima: z.number().min(0).max(1000), peso: z.number().min(0).max(100).nullable() })).max(15),
-        zera: z.array(z.string().max(300)).max(20),
+        criterios: z.array(z.object({ nome: text(200), descricao: text(800), notaMaxima: z.number().min(0).max(1000), peso: z.number().min(0).max(100).nullable() })).max(15),
+        zera: z.array(text(300)).max(20),
         ...evidence,
       })
       .nullable(),
   }),
   taf: z.object({
     taf: z
-      .array(z.object({ prova: z.string().max(200), sexo: z.enum(["MASCULINO", "FEMININO", "AMBOS"]), faixaEtaria: z.string().max(80).nullable(), indice: z.string().max(80), unidade: z.string().max(40), ...evidence }))
+      .array(z.object({ prova: text(200), sexo: z.enum(["MASCULINO", "FEMININO", "AMBOS"]), faixaEtaria: text(80).nullable(), indice: text(80), unidade: text(40), ...evidence }))
       .max(80),
   }),
   documentos: z.object({
-    documentos: z.array(z.object({ nome: z.string().max(300), tipo: z.enum(["DOCUMENTO", "EXAME_SAUDE"]), etapa: z.string().max(200), prazo: isoDate.nullable(), ...evidence })).max(120),
+    documentos: z.array(z.object({ nome: text(300), tipo: z.enum(["DOCUMENTO", "EXAME_SAUDE"]), etapa: text(200), prazo: optionalDate, ...evidence })).max(120),
   }),
 } as const;
 
@@ -134,10 +144,11 @@ export function toFields(groups: Partial<{ [K in GroupKey]: GroupOutput<K> }>): 
     for (let n = 2; out[key]; n++) key = `data:${d.chave}:${n}`;
     add(key, "datas", d.chave === "outra" ? d.rotulo : DATE_LABEL[d.chave], d.data, d.pagina, d.trecho);
   }
-  if (g.etapas?.etapas.length) add("etapas", "etapas", "Etapas", g.etapas.etapas.map(({ nome, ordem, eliminatoria, descricao }) => ({ nome, ordem, eliminatoria, descricao })), pageOf(g.etapas.etapas), quoteOf(g.etapas.etapas));
+  if (g.etapas?.etapas.length) add("etapas", "etapas", "Etapas", g.etapas.etapas.map(({ nome, ordem, eliminatoria, descricao, cronograma }) => ({ nome, ordem, eliminatoria, descricao, cronograma: cronograma ?? [] })), pageOf(g.etapas.etapas), quoteOf(g.etapas.etapas));
   if (g.provas?.disciplinas.length) {
-    add("disciplinas", "provas", "Disciplinas, questões, pesos e mínimos", g.provas.disciplinas.map(({ nome, questoes, peso, notaMinima }) => ({ nome, questoes, peso, notaMinima })), pageOf(g.provas.disciplinas), quoteOf(g.provas.disciplinas));
+    add("disciplinas", "provas", "Disciplinas, questões, pesos, mínimos e dia", g.provas.disciplinas.map(({ nome, questoes, peso, notaMinima, dia }) => ({ nome, questoes, peso, notaMinima, dia })), pageOf(g.provas.disciplinas), quoteOf(g.provas.disciplinas));
   }
+  if (g.provas?.dias?.length) add("dias", "provas", "Duração de cada dia de prova", g.provas.dias.map(({ dia, duracaoMinutos }) => ({ dia, duracaoMinutos })), pageOf(g.provas.dias), quoteOf(g.provas.dias));
   if (g.provas?.pontuacao) {
     const { pagina, trecho, ...value } = g.provas.pontuacao;
     add("pontuacao", "provas", "Regra de pontuação", value, pagina, trecho);

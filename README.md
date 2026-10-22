@@ -45,6 +45,58 @@ Os concursos do catálogo vêm marcados como **não verificados**: não há data
 
 ## Variáveis de ambiente
 
+### Uso pessoal com ChatGPT Plus ou Pro
+
+Para usar sua própria assinatura nas questões (importação, interpretação e geração),
+nas correções e temas de redação, no Mentor e na leitura de editais:
+
+1. No `.env`, defina `CHATGPT_PERSONAL_MODE="on"` e mantenha `NEXT_PUBLIC_APP_URL="http://localhost:3000"`.
+2. Inicie com `npm run local` (gera a versão otimizada e abre; bem mais rápida no dia a dia) ou `npm run dev` (para programar: compila cada página na primeira visita, por isso é lento) e abra `http://127.0.0.1:3000` (não `localhost`: a OpenAI só devolve o login para 127.0.0.1). Reinicie o servidor se ele já estava aberto. No modo pessoal, os comandos `dev` e `start` vinculam o servidor apenas a esta máquina; `dev:personal` também permite pedir isso explicitamente.
+3. Ao entrar, o Vértice abre o pop-up **Conectar sua IA** enquanto não houver conta conectada (também disponível em **Configurações › Inteligência artificial** e, para admins, em **Admin › Conexão de IA**). Clique em **Conectar com ChatGPT**: abre uma janela com o login oficial da OpenAI; entre, autorize o uso do plano e a janela fecha sozinha. Se o navegador bloquear pop-ups, o login segue na mesma aba e volta para Configurações. A mesma tela testa a conexão, troca conta e modelo e desconecta.
+4. Alternativa pelo terminal: `npm run chatgpt -- conectar` e `npm run chatgpt -- verificar` (o teste consome uma pequena parte da franquia).
+
+O modo pessoal tem prioridade sobre os outros provedores nos quatro recursos. Não
+é preciso remover as chaves existentes: não há troca automática para Gemini,
+Claude ou uma API paga quando a franquia do ChatGPT acaba. O uso está sujeito à
+elegibilidade da conta e aos limites compartilhados do plano. É uma integração
+local para o próprio titular: cada aluno instala o Vértice no próprio computador
+e conecta a própria conta. Não é uma forma de atender outros alunos com uma
+assinatura. Hospedagem pública depende de condições próprias da OpenAI.
+
+O modelo é escolhido entre os disponíveis para sua conta. `npm run chatgpt -- modelos`
+lista as opções; `CHATGPT_MODEL` permite fixar uma delas. `npm run chatgpt -- status`
+mostra a conta ativa. Para outra conta, use `conectar --nova-conta`; `usar <número>`
+seleciona um registro salvo. `npm run chatgpt -- desconectar` revoga a conexão e
+remove os tokens locais, preservando o registro para uma futura reconexão.
+
+As credenciais ficam em `.chatgpt/`, fora de Git, criptografadas usando
+`SESSION_SECRET`. Não compartilhe essa pasta nem o segredo. Alterar o segredo
+exige reconectar. A sessão é renovada automaticamente, com exclusão mútua entre
+processos para proteger a rotação dos tokens. Depois de encerrar um processo
+abruptamente, um lock persistente pode exigir fechar todos os processos do Vértice
+e remover apenas `.chatgpt/connection.lock`.
+
+PDFs e imagens são enviados como conteúdo do pedido: a API de upload de arquivos
+não está disponível neste fluxo. As validações existentes, o gabarito oficial,
+a revisão antes de publicar questões e as duas correções da redação são mantidos.
+Geração de temas em lote pela Batch API continua exclusiva da Anthropic; no modo
+pessoal, gere por concurso. Os registros de uso guardam tokens e modelo; preço por
+chamada de API não é calculado para a franquia do ChatGPT.
+
+Enquanto o Vértice está aberto (`npm run local`, `npm start` ou `npm run dev`), a busca de editais roda sozinha de hora em hora num processo separado: verifica as fontes vencidas e lê com IA até 5 documentos novos por vez. As mensagens aparecem no terminal com o prefixo `[editais]`. `EDITAIS_AUTO="off"` desliga; `EDITAIS_AUTO_EVERY_MIN` muda o intervalo.
+
+A detecção de novos editais continua verificando as fontes oficiais cadastradas;
+o ChatGPT classifica e interpreta os documentos encontrados. Ele não inventa fontes
+nem substitui a conferência de datas e trechos antes da publicação.
+
+Referências oficiais: [conexão local](https://developers.openai.com/siwc/token-sharing-open-source/sign-in),
+[limites desta integração](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)
+e [gerenciamento da franquia](https://chatgpt.com/#settings/Usage).
+
+Verificação offline da integração: `npm run test:chatgpt` (não usa sua franquia).
+
+### Configuração dos provedores
+
 | Variável | Obrigatória | Descrição |
 |---|---|---|
 | `DATABASE_URL` | Sim | Conexão com o PostgreSQL. O `.env.example` já aponta para o `docker-compose.yml`. |
@@ -61,7 +113,9 @@ Os concursos do catálogo vêm marcados como **não verificados**: não há data
 | `MENTOR_MAX_ROUNDS` | Não | Chamadas ao modelo por mensagem do Mentor. Padrão: `5`. |
 | `GEMINI_PAID_TIER` | Não | `on` confirma plano pago do Gemini. Em produção, sem isso o Mentor não usa o Gemini, porque o plano gratuito pode usar os dados dos estudantes. Padrão: `off`. |
 | `ESSAYS_ENABLED` | Não | Liga a área de redação para os estudantes. Vazio: ligada em desenvolvimento e desligada em produção. Ligue depois que `npm run redacao:calibrar` passar. Administradores sempre veem a área. |
-| `ESSAY_MODEL` / `ESSAY_REWRITE_MODEL` / `ESSAY_THEME_MODEL` | Não | Modelos da correção, da reescrita de parágrafo e da geração de temas. Padrão: `claude-sonnet-5-5`. Usam `ANTHROPIC_API_KEY`. |
+| `ESSAY_MODEL` / `ESSAY_REWRITE_MODEL` / `ESSAY_THEME_MODEL` | Não | Modelos da correção, da reescrita de parágrafo e da geração de temas. Padrão: `claude-sonnet-5-5`. Usados com a Anthropic. |
+| `ESSAY_PROVIDER` | Não | `anthropic` ou `gemini`. Padrão: Anthropic se houver `ANTHROPIC_API_KEY`, senão Gemini (`GEMINI_API_KEY`). Em produção, Gemini exige `GEMINI_PAID_TIER=on`. |
+| `ESSAY_GEMINI_MODELS` | Não | Modelos Gemini da redação, em ordem de fallback. Padrão: `gemini-3.6-flash,gemini-3.5-flash-lite`. |
 | `ESSAY_EFFORT` | Não | Esforço da correção. Padrão: `medium`. |
 | `ESSAY_MONTHLY_LIMIT` / `ESSAY_REWRITE_MONTHLY_LIMIT` | Não | Correções e reescritas de parágrafo por estudante por mês. Padrão: `8` e `20`. Centralizados em `src/lib/plan-limits.ts`, prontos para virar limite por plano. |
 | `ESSAY_DISAGREEMENT_THRESHOLD` / `ESSAY_RANGE_MARGIN` | Não | Diferença entre as duas correções que marca "correção incerta" (padrão `0.12` da nota máxima) e folga somada à faixa (padrão `0.04`). |

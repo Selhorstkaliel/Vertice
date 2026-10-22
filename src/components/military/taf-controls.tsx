@@ -373,7 +373,7 @@ export function TafTestCard({ test, enrollments, today }: { test: TafTestView; e
         <div className="flex flex-col gap-0.5">
           <dt className="text-sm text-fg-subtle">Meta</dt>
           <dd className="numeral text-xl font-light text-fg">{test.targetValue !== null ? unitLabel(test.targetValue) : "—"}</dd>
-          <dd className="text-sm text-fg-subtle">{test.targetValue !== null ? "Informada por você, não verificada" : "Sem meta"}</dd>
+          <dd className="text-sm text-fg-subtle">{test.targetValue === null ? "Sem meta" : test.editalTarget ? `Índice do edital${test.editalTarget.year ? ` ${test.editalTarget.year}` : ""}` : "Informada por você, não verificada"}</dd>
         </div>
         <div className="flex flex-col gap-0.5">
           <dt className="text-sm text-fg-subtle">Melhor marca</dt>
@@ -431,8 +431,8 @@ export function TafSafetyNotice() {
   return (
     <Notice tone="warning" title="Sugestão geral, não prescrição">
       A progressão sugerida aqui é geral e não substitui um profissional de educação física nem um médico. Menores de idade devem treinar com acompanhamento de um adulto
-      responsável e de um profissional. Em caso de dor, pare e procure orientação. Confirme os índices e o protocolo de cada prova no edital oficial: os índices desta tela
-      são informados por você e não são verificados.
+      responsável e de um profissional. Em caso de dor, pare e procure orientação. As provas criadas a partir do edital publicado trazem o índice oficial; as que você
+      cadastrar ou alterar ficam com os seus valores. Confirme sempre o protocolo de cada prova no edital.
     </Notice>
   );
 }

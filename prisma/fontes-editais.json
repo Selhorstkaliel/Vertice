@@ -11,7 +11,7 @@
       "concurso": "espcex",
       "termosDou": ["Escola Preparatória de Cadetes do Exército", "EsPCEx"],
       "fontes": [
-        { "url": "https://www.espcex.eb.mil.br/", "tipo": "lista-de-links", "situacao": "inacessivel", "observacao": "Endereço citado no edital e no manual do candidato. Daqui, o DNS dos subdomínios eb.mil.br foi recusado e a conexão foi recusada pelo servidor. Fica desativada até responder; o DOU cobre a publicação do edital." }
+        { "url": "https://www.espcex.eb.mil.br/index.php/home/concurso", "tipo": "lista-de-links", "situacao": "ok", "observacao": "Página do concurso no site da EsPCEx: edital, retificações, manual do candidato, comunicados e resultados. Voltou a responder daqui em 22/10/2026; robots.txt só bloqueia /administrator/." }
       ]
     },
     {

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { fail, fromZodError, ok, runAction, type ActionResult } from "@/lib/action";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/modules/auth/admin";
-import { describeQuestionAiError, QuestionAiError, questionAiConfigured } from "@/modules/ai/gemini";
+import { describeQuestionAiError, QuestionAiError, questionAiConfigured, documentAiSetupHint } from "@/modules/ai/documents";
 import { generateStyleQuestions, MAX_GENERATED_PER_RUN } from "./generate";
 import { startExtraction } from "./runner";
 import { approveCleanDrafts, cropDraftFigure, deleteExamPaper, rejectDraft, removeDraftFigure, restoreDraft, saveDraft } from "./service";
@@ -27,7 +27,7 @@ async function draftPaper(draftId: string) {
 export async function startExtractionAction(paperId: string): Promise<ActionResult<null>> {
   return runAction(async () => {
     await requireAdmin();
-    if (!questionAiConfigured()) return fail("Configure GEMINI_API_KEY no servidor para ler provas.");
+    if (!questionAiConfigured()) return fail(documentAiSetupHint());
     const paper = await db.examPaper.findUnique({ where: { id: id.parse(paperId) }, select: { status: true, leaseUntil: true } });
     if (!paper) return fail("Prova não encontrada.");
     if (paper.leaseUntil && paper.leaseUntil > new Date()) return fail("A leitura desta prova já está em andamento.");
@@ -132,7 +132,7 @@ const generationSchema = z.object({
 export async function generateQuestionsAction(input: z.input<typeof generationSchema>): Promise<ActionResult<{ created: number }>> {
   return runAction(async () => {
     await requireAdmin();
-    if (!questionAiConfigured()) return fail("Configure GEMINI_API_KEY no servidor para gerar questões.");
+    if (!questionAiConfigured()) return fail(documentAiSetupHint());
     const parsed = generationSchema.safeParse(input);
     if (!parsed.success) return fromZodError(parsed.error);
     try {

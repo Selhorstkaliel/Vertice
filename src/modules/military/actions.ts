@@ -129,3 +129,15 @@ export async function deleteTafResultAction(id: string): Promise<ActionResult<nu
     return ok(null, "Resultado removido.");
   });
 }
+
+/** The edital's TAF indices differ by sex: asked once, then the tests are filled from the edital. */
+export async function saveTafSexAction(sex: "MALE" | "FEMALE"): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const user = await requireOnboardedUser();
+    const parsed = z.enum(["MALE", "FEMALE"]).safeParse(sex);
+    if (!parsed.success) return fail("Escolha uma opção.");
+    await db.profile.update({ where: { userId: user.id }, data: { sex: parsed.data } });
+    revalidate();
+    return ok(null, "Pronto. As provas do TAF foram preenchidas com os índices do edital.");
+  });
+}

@@ -17,9 +17,18 @@ export default async function StageItemsAdminPage({ searchParams }: { searchPara
   const { concurso } = await searchParams;
   const competitions = await db.competition.findMany({ where: { ownerId: null, forkedFromId: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   const selected = competitions.find((c) => c.id === concurso) ?? competitions[0];
-  const stages = selected
-    ? await db.competitionStage.findMany({ where: { competitionId: selected.id }, orderBy: { order: "asc" }, include: { items: { orderBy: { order: "asc" } } } })
-    : [];
+  const [stages, editais] = selected
+    ? await Promise.all([
+        db.competitionStage.findMany({ where: { competitionId: selected.id }, orderBy: { order: "asc" }, include: { items: { orderBy: { order: "asc" } } } }),
+        db.editalDocument.findMany({
+          where: { competitionId: selected.id, type: { in: ["EDITAL", "RETIFICACAO"] }, status: { in: ["NEW", "READING", "REVIEW", "PUBLISHED", "FAILED"] } },
+          select: { id: true, title: true, status: true, publishedAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        }),
+      ])
+    : [[], []];
+  const EDITAL_STATUS: Record<string, string> = { NEW: "na fila de leitura", READING: "sendo lido", REVIEW: "lido, esperando sua revisão", PUBLISHED: "publicado: itens aplicados", FAILED: "leitura falhou" };
 
   return (
     <div className="flex flex-col gap-8">
@@ -28,7 +37,7 @@ export default async function StageItemsAdminPage({ searchParams }: { searchPara
       </Link>
       <PageHeader
         title="Itens das etapas"
-        description="Documentos, exames da inspeção de saúde e prazos de cada etapa, sempre com o link do edital. Sem conferência, o aluno vê “Informação não verificada”. Os itens são copiados para os alunos inscritos na próxima visita às etapas."
+        description="Documentos, exames da inspeção de saúde e as datas de cada etapa vêm do edital real: a busca automática lê o cronograma de cada etapa e, ao publicar o edital revisado em Editais, cada evento vira um item com o prazo e o link do edital. Os itens são copiados para os alunos inscritos na próxima visita às etapas."
       />
       <nav aria-label="Concursos" className="flex flex-wrap gap-1.5">
         {competitions.map((c) => (
@@ -42,6 +51,22 @@ export default async function StageItemsAdminPage({ searchParams }: { searchPara
           </Link>
         ))}
       </nav>
+      {selected && (
+        <section aria-label="Editais deste concurso" className="flex flex-col gap-2">
+          {editais.length === 0 ? (
+            <p className="text-base text-fg-muted">Nenhum edital de {selected.name} encontrado ainda pela busca automática. Os itens aparecem aqui quando um edital for lido e publicado.</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {editais.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center gap-2 text-base">
+                  <Link href={`/admin/editais/${e.id}`} className="text-info hover:underline hover:underline-offset-4">{e.title}</Link>
+                  <Badge tone={e.status === "PUBLISHED" ? "positive" : e.status === "REVIEW" ? "warning" : e.status === "FAILED" ? "danger" : "neutral"}>{EDITAL_STATUS[e.status]}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       {stages.length === 0 ? (
         <p className="text-base text-fg-muted">Este concurso não tem etapas no catálogo.</p>
       ) : (
@@ -59,6 +84,12 @@ export default async function StageItemsAdminPage({ searchParams }: { searchPara
                       <span className="ml-2 text-sm text-fg-subtle">
                         {STAGE_ITEM_KIND_LABEL[i.kind]}
                         {i.dueDate ? `, até ${formatDayKey(dbDateToKey(i.dueDate), "dayMonth")}` : ""}
+                        {i.sourceUrl ? (
+                          <>
+                            {" · "}
+                            <a href={i.sourceUrl} target="_blank" rel="noreferrer" className="text-info hover:underline hover:underline-offset-4">edital</a>
+                          </>
+                        ) : null}
                       </span>
                     </span>
                     <Badge tone={i.verification === "VERIFIED" ? "positive" : "warning"}>
@@ -70,7 +101,12 @@ export default async function StageItemsAdminPage({ searchParams }: { searchPara
                 ))}
               </ul>
             )}
-            <CatalogStageItemForm stageId={s.id} stageName={s.name} />
+            <details className="group">
+              <summary className="cursor-pointer text-sm text-fg-muted hover:text-fg">Adicionar item manualmente (quando o edital não traz)</summary>
+              <div className="mt-3">
+                <CatalogStageItemForm stageId={s.id} stageName={s.name} />
+              </div>
+            </details>
           </section>
         ))
       )}

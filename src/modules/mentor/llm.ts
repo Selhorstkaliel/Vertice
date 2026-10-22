@@ -5,6 +5,8 @@ import type { MentorContext } from "./data";
 import { MENTOR_SYSTEM_PROMPT } from "./prompt";
 import { mentorProvider } from "./provider";
 import { runCompatTurn, toSimpleText } from "./providers/openai-compatible";
+import { runChatGptTurn } from "./providers/chatgpt";
+import { ChatGptError } from "@/modules/ai/chatgpt-protocol";
 import { MENTOR_TOOLS, type ToolRunState } from "./tools";
 import { MentorProviderError, MentorRefusalError, runToolCalls, type MentorStreamEvent, type MentorTurnResult } from "./turn-shared";
 
@@ -70,6 +72,7 @@ export async function runMentorTurn(
   if (!provider.configured) throw new Error("Mentor AI is not configured");
   if (provider.id !== "anthropic") {
     const history = messages.map((m) => ({ role: m.role === "assistant" ? ("assistant" as const) : ("user" as const), content: toSimpleText(m.content) }));
+    if (provider.id === "chatgpt") return runChatGptTurn(ctx, history, emit, signal, partial);
     return runCompatTurn(provider, ctx, history, emit, signal, partial, env.MENTOR_EFFORT);
   }
   return runAnthropicTurn(ctx, messages, emit, signal, partial);
@@ -154,6 +157,7 @@ async function runAnthropicTurn(
 
 /** Student-facing message for an API failure; details go to the server log only. */
 export function describeMentorError(err: unknown): { message: string; log: boolean } {
+  if (err instanceof ChatGptError) return { message: err.message, log: false };
   if (err instanceof MentorRefusalError) return { message: "Não posso ajudar com esse pedido. Reformule a pergunta com foco na sua preparação.", log: false };
   if (err instanceof Anthropic.APIUserAbortError || (err instanceof Error && err.name === "AbortError")) return { message: "Resposta interrompida.", log: false };
 
